@@ -260,7 +260,7 @@ def get_dmm_current_month(
 
     df_dmm_current.drop(columns="date_report_prev", inplace=True)
 
-    return df_dmm_current, df_dmm_histo
+    return df_dmm_current.round(2), df_dmm_histo.round(2)
 
 
 def get_cmm_current_month(
@@ -451,4 +451,4 @@ def get_cmm_current_month(
 
     df_cmm_current.drop(columns="date_report_prev", inplace=True)
 
-    return df_cmm_current, df_cmm_histo
+    return df_cmm_current.round(2), df_cmm_histo.round(2)

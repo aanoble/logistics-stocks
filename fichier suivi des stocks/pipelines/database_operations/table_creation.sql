@@ -377,3 +377,16 @@ delete
 create index idx_date_report_share_link on
 suivi_stock.share_link
 	using btree (date_report);
+
+
+-- stock_track
+-- stock_track_dmm
+-- stock_track_dmm_histo
+-- stock_track_cmm
+-- stock_track_cmm_histo
+-- stock_track_prevision
+
+-- PNLP, PNLS, PNLT, PNN, PNSME
+-- Décembre 2024 
+-- Janvier 2025
+-- Février 2025

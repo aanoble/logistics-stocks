@@ -373,7 +373,7 @@ def synchronize_table_data(
             )
 
             update_query = f"""
-            UPDATE {schema_name}.{table_name}>+
+            UPDATE {schema_name}.{table_name}
             SET {set_clause}
             WHERE {" AND ".join(f"{key} = %s" for key in merge_keys)}
             """

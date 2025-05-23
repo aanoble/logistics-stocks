@@ -204,4 +204,4 @@ def get_prevision_current_month(
 
     display(df_prevision_other_month.head(3))
 
-    return df_prevision_other_month
+    return df_prevision_other_month.round(2)
