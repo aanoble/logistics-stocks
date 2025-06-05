@@ -215,6 +215,9 @@ def synchronize_product_metadata(
         source_df = source_df[list(required_columns)].rename(
             columns={"acronym": "designation_acronym"}
         )
+        source_df.astype(
+            {col: db_products[col].dtype for col in db_products if col in source_df.columns}
+        )
         # Merge and update logic
         merged = source_df.merge(
             db_products,
@@ -222,7 +225,8 @@ def synchronize_product_metadata(
             right_on="code_produit",
             how="inner",
             suffixes=("_new", "_current"),
-        )
+        ).round(2)
+
         condition = ""
         for col in [col for col in source_df.columns if col not in ["Standard product code"]]:
             condition += f"(merged.{col}_new != merged.{col}_current) | "
@@ -361,6 +365,7 @@ def synchronize_table_data(
             condition += f"(updates.{col}_new != updates.{col}_current) | "
         condition = condition.strip("| ")
 
+        updates = updates.round(2)
         updates = updates.loc[eval(condition)]
 
         # display(updates)
@@ -408,7 +413,11 @@ def get_table_info(table_name: str, schema_name: str, engine) -> tuple:
 
 
 def upsert_dataframe(
-    df: pd.DataFrame, table_name: str, schema_name: str, engine, conflict_columns: list = []
+    df: pd.DataFrame,
+    table_name: str,
+    schema_name: str = "suivi_stock",
+    conflict_columns: list = [],
+    engine=civ_engine,
 ):
     """
     Effectue un upsert en ignorant les colonnes auto-incrémentées
@@ -432,13 +441,25 @@ def upsert_dataframe(
     metadata = MetaData(schema=schema_name)
     table = Table(table_name, metadata, autoload_with=engine)
 
+    conflict_columns = pk if not conflict_columns else conflict_columns
+
     stmt = insert(table).values(df.to_dict("records"))
 
+    # Generate the update dictionary
+    # Exclude the primary key and conflict columns from the update
     update_dict = {c.key: c for c in stmt.excluded if c.key not in [*conflict_columns, *pk]}
 
-    conflict_columns = pk if len(conflict_columns) == 0 else conflict_columns
+    # Generate the WHERE clause for the update statement
+    where_clause = None
+    for col in update_dict.keys():
+        condition = table.c[col].is_distinct_from(stmt.excluded[col])
+        where_clause = condition if where_clause is None else where_clause | condition
 
-    update_stmt = stmt.on_conflict_do_update(index_elements=conflict_columns, set_=update_dict)
+    update_stmt = stmt.on_conflict_do_update(
+        index_elements=conflict_columns, set_=update_dict, where=where_clause
+    )
 
     with engine.begin() as conn:
         conn.execute(update_stmt)
+
+    return f"Upsert de {len(df)} enrégistrements réussie"
