@@ -2,7 +2,7 @@
 Script utilisé pour la création des tables
 */
 
-DROP TABLE IF EXISTS dap_tools.dim_region CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.dim_region CASCADE;
 CREATE TABLE dap_tools.dim_region(
 "Code_region" VARCHAR(20) PRIMARY KEY,
 "Region" VARCHAR(100),
@@ -11,7 +11,7 @@ CONSTRAINT unique_code_region UNIQUE ("Code_region")
 );
 
 
-DROP TABLE IF EXISTS dap_tools.dim_district CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.dim_district CASCADE;
 CREATE TABLE dap_tools.dim_district( 
 "Code_district" VARCHAR(20) PRIMARY KEY,
 "District" VARCHAR(100),
@@ -19,7 +19,7 @@ CREATE TABLE dap_tools.dim_district(
 CONSTRAINT unique_code_district UNIQUE ("Code_district")
 );
 
-DROP TABLE IF EXISTS dap_tools.dim_structure CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.dim_structure CASCADE;
 CREATE TABLE dap_tools.dim_structure(
 "Code_ets" VARCHAR(20) PRIMARY KEY,
 "Structure" VARCHAR(250),
@@ -28,7 +28,7 @@ CONSTRAINT unique_code_ets UNIQUE ("Code_ets")
 );
 
 
-DROP TABLE IF EXISTS dap_tools.dim_sous_programme CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.dim_sous_programme CASCADE;
 CREATE TABLE dap_tools.dim_sous_programme(
 "Code_sous_prog" VARCHAR(20) PRIMARY KEY,
 "Sous_programme" VARCHAR(250),
@@ -37,7 +37,7 @@ CONSTRAINT unique_code_sous_prog UNIQUE ("Code_sous_prog")
 );
 
 
-DROP TABLE IF EXISTS dap_tools.dim_programme CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.dim_programme CASCADE;
 CREATE TABLE dap_tools.dim_programme(
 "Programme" VARCHAR(20) PRIMARY KEY,
 programme_order INTEGER,
@@ -50,7 +50,7 @@ CREATE SEQUENCE dap_tools.dim_produit_seq
     START WITH 1
     CACHE 1;
 
-DROP TABLE IF EXISTS dap_tools.dim_produit CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.dim_produit CASCADE;
 CREATE TABLE dap_tools.dim_produit(
 id_produit_pk BIGINT PRIMARY KEY,
 "Code_produit" VARCHAR(20),
@@ -62,7 +62,7 @@ id_produit_pk BIGINT PRIMARY KEY,
 CONSTRAINT unique_id_produit_pk UNIQUE ("id_produit_pk")
 );
 
-DROP TABLE IF EXISTS dap_tools.comp_promp_par_ets CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.comp_promp_par_ets CASCADE;
 CREATE TABLE dap_tools.comp_promp_par_ets(
 "id_comp_promp_par_ets" SERIAL PRIMARY KEY,
 "Code_ets" VARCHAR(20) REFERENCES dap_tools.dim_structure("Code_ets") ON DELETE CASCADE,
@@ -90,7 +90,7 @@ count_produit_inline INTEGER,
 date_report DATE,
 CONSTRAINT unique_id_comp_promp_par_ets UNIQUE ("id_comp_promp_par_ets"));
 
-DROP TABLE IF EXISTS dap_tools.comp_promp_attendu_region CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.comp_promp_attendu_region CASCADE;
 CREATE TABLE dap_tools.comp_promp_attendu_region(
 "id_comp_promp_region" SERIAL PRIMARY KEY,
 "Code_region" VARCHAR(20) REFERENCES dap_tools.dim_region("Code_region") ON DELETE CASCADE,
@@ -117,7 +117,7 @@ taux_indicateur_region REAL,
 date_report DATE,
 CONSTRAINT unique_id_id_comp_promp_region UNIQUE ("id_comp_promp_region"));
 
-DROP TABLE IF EXISTS dap_tools.recap_stock_by_region CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.recap_stock_by_region CASCADE;
 CREATE TABLE dap_tools.recap_stock_by_region(
 "id_recap_stock_pk" SERIAL PRIMARY KEY,
 "Code_region" VARCHAR(20) REFERENCES dap_tools.dim_region("Code_region") ON DELETE CASCADE,
@@ -127,7 +127,7 @@ dispo_traceur REAL,
 date_report DATE,
 CONSTRAINT unique_id_recap_stock_pk UNIQUE ("id_recap_stock_pk")
 
-DROP TABLE IF EXISTS dap_tools.recap_stock_prog_region CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.recap_stock_prog_region CASCADE;
 CREATE TABLE dap_tools.recap_stock_prog_region(
 "id_stock_prog_region_pk" SERIAL PRIMARY KEY,
 "id_produit_fk" BIGINT REFERENCES dap_tools.dim_produit("id_produit_pk") ON DELETE CASCADE,
@@ -139,7 +139,7 @@ date_report DATE,
 CONSTRAINT unique_id_stock_prog_region_pk UNIQUE ("id_stock_prog_region_pk")
 );
 
-DROP TABLE IF EXISTS dap_tools.recap_stock_prog_nat CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.recap_stock_prog_nat CASCADE;
 CREATE TABLE dap_tools.recap_stock_prog_nat(
 "id_stock_prog_nat_pk" SERIAL PRIMARY KEY,
 "id_produit_fk" BIGINT REFERENCES dap_tools.dim_produit("id_produit_pk") ON DELETE CASCADE,
@@ -159,7 +159,7 @@ date_report DATE,
 CONSTRAINT unique_id_stock_prog_nat_pk UNIQUE ("id_stock_prog_nat_pk")
 );
 
-DROP TABLE IF EXISTS dap_tools.etat_de_stock CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.etat_de_stock CASCADE;
 CREATE TABLE dap_tools.etat_de_stock(
 "id_etat_stock_pk" SERIAL PRIMARY KEY,
 "id_produit_fk" BIGINT REFERENCES dap_tools.dim_produit("id_produit_pk") ON DELETE CASCADE,
@@ -187,7 +187,7 @@ date_report DATE,
 CONSTRAINT unique_id_etat_stock_pk UNIQUE ("id_etat_stock_pk")
 
 
-DROP TABLE IF EXISTS dap_tools.share_link_fbr CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.share_link_fbr CASCADE;
 CREATE TABLE dap_tools.share_link_fbr(
 id_share_link_fbr_pk SERIAL PRIMARY KEY,
 code_region VARCHAR(20) REFERENCES dap_tools.dim_region("Code_region") ON DELETE CASCADE,
@@ -200,7 +200,7 @@ CREATE INDEX idx_date_report_share_link_fbr ON dap_tools.share_link_fbr (date_re
 
 
 
-DROP TABLE IF EXISTS dap_tools.users_region_level_fbr CASCADE;
+-- DROP TABLE IF EXISTS dap_tools.users_region_level_fbr CASCADE;
 CREATE TABLE dap_tools.users_region_level_fbr(
 id_users_region_level_fbr_pk SERIAL PRIMARY KEY,
 code_region VARCHAR(20) REFERENCES dap_tools.dim_region("Code_region") ON DELETE CASCADE,

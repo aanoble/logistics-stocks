@@ -1,6 +1,6 @@
 -- suivi_stock.dim_produit_stock_track definition
 
-drop table if exists suivi_stock.dim_produit_stock_track cascade;
+-- drop table if exists suivi_stock.dim_produit_stock_track cascade;
 
 create table suivi_stock.dim_produit_stock_track (
 	id_dim_produit_stock_track_pk serial4 not null,
@@ -27,7 +27,7 @@ delete
 );
 -- suivi_stock.stock_track definition
 
-drop table if exists suivi_stock.stock_track cascade;
+-- drop table if exists suivi_stock.stock_track cascade;
 
 create table suivi_stock.stock_track (
 	id_stock_track_pk serial4 not null,
@@ -94,7 +94,7 @@ suivi_stock.stock_track
 	using btree (date_report);
 -- Drop table
 
-drop table if exists suivi_stock.stock_track_cmm cascade;
+-- drop table if exists suivi_stock.stock_track_cmm cascade;
 
 create table suivi_stock.stock_track_cmm (
 	id_stock_track_cmm_pk serial4 not null,
@@ -117,7 +117,7 @@ suivi_stock.stock_track_cmm
 	using btree (date_report);
 -- Drop table
 
-drop table if exists suivi_stock.stock_track_cmm_histo cascade;
+-- drop table if exists suivi_stock.stock_track_cmm_histo cascade;
 
 create table suivi_stock.stock_track_cmm_histo (
 	id_stock_track_cmm_histo_pk serial4 not null,
@@ -136,7 +136,7 @@ suivi_stock.stock_track_cmm_histo
 	using btree (date_report);
 -- Drop table
 
-drop table if exists suivi_stock.stock_track_dmm cascade;
+-- drop table if exists suivi_stock.stock_track_dmm cascade;
 
 create table suivi_stock.stock_track_dmm (
 	id_stock_track_dmm_pk serial4 not null,
@@ -158,7 +158,7 @@ create index idx_date_report_dmm on
 suivi_stock.stock_track_dmm
 	using btree (date_report);
 
-drop table if exists suivi_stock.stock_track_dmm_histo cascade;
+-- drop table if exists suivi_stock.stock_track_dmm_histo cascade;
 
 create table suivi_stock.stock_track_dmm_histo (
 	id_stock_track_dmm_histo serial4 not null,
@@ -177,7 +177,7 @@ suivi_stock.stock_track_dmm_histo
 	using btree (date_report);
 -- Drop table
 
-drop table if exists suivi_stock.stock_track_detaille cascade;
+-- drop table if exists suivi_stock.stock_track_detaille cascade;
 
 create table suivi_stock.stock_track_detaille (
 	stock_track_detaille_pk serial4 not null,
@@ -196,7 +196,7 @@ create index idx_date_report_detaille on
 suivi_stock.stock_track_detaille
 	using btree (date_report);
 
-drop table if exists suivi_stock.stock_track_prevision cascade;
+-- drop table if exists suivi_stock.stock_track_prevision cascade;
 
 create table suivi_stock.stock_track_prevision (
 	id_stock_track_prevision_pk serial4 not null,
@@ -222,7 +222,7 @@ create index idx_date_report_prevision on
 suivi_stock.stock_track_prevision
 	using btree (date_report);
 
-drop table if exists suivi_stock.stock_track_npsp cascade;
+-- drop table if exists suivi_stock.stock_track_npsp cascade;
 
 create table suivi_stock.stock_track_npsp (
 	id_stock_track_npsp_pk serial4 not null,
@@ -251,7 +251,7 @@ suivi_stock.stock_track_npsp
 	using btree (date_report);
 --- plan d'approvisionnement
 
-drop table if exists suivi_stock.plan_approv cascade;
+-- drop table if exists suivi_stock.plan_approv cascade;
 
 create table suivi_stock.plan_approv (
 	id_plan_approv_pk serial4 not null,
@@ -361,7 +361,7 @@ select
 -- Drop table
 
 
-drop table if exists suivi_stock.share_link;
+-- drop table if exists suivi_stock.share_link;
 
 create table suivi_stock.share_link (
 	id_share_link_pk serial4 not null,
