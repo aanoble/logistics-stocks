@@ -59,6 +59,9 @@ def update_sheet_annexe_2(
 
     df_receptions = pd.DataFrame(data, columns=cols)
     df_receptions["Nouveau code"] = df_receptions["Nouveau code"].replace("ND", np.nan)
+    df_receptions["Date d'entrée en machine"] = pd.to_datetime(
+        df_receptions["Date d'entrée en machine"], errors="coerce"
+    )
     try:
         df_receptions["Nouveau code"] = df_receptions["Nouveau code"].astype(float)
     except Exception:
