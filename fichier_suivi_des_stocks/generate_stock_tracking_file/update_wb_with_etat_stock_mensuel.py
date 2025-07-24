@@ -1,3 +1,4 @@
+from compute_indicators.utils import check_if_sheet_name_in_file
 from efc.interfaces.iopenpyxl import OpenpyxlInterface
 from openpyxl.formatting.rule import Rule
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -207,14 +208,15 @@ def update_sheets_etat_mensuel(wb_base, wb_temp, programme, date_report):
         "PPI": 3,
         "Prelèvement": 3,
     }
+    sheet_names_ws_base = wb_base.sheetnames
+    sheet_names_ws_temp = wb_temp.sheetnames
 
     for sheet_name, max_row in dico_sheet_names.items():
-        ws_base = wb_base[
-            [col for col in wb_base.sheetnames if sheet_name.upper() in col.upper()][0]
-        ]
-        ws_temp = wb_temp[
-            [col for col in wb_temp.sheetnames if sheet_name.upper() in col.upper()][0]
-        ]
+        _sheet_name = check_if_sheet_name_in_file(sheet_name, sheet_names_ws_base)
+        ws_base = wb_base[_sheet_name]
+
+        _sheet_name = check_if_sheet_name_in_file(sheet_name, sheet_names_ws_temp)
+        ws_temp = wb_temp[_sheet_name]
 
         update_data_on_sheet(wb_base, ws_base, ws_temp, sheet_name, programme, date_format, max_row)
 
