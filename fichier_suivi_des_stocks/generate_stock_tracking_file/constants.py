@@ -168,7 +168,7 @@ DICO_FORMULES_ANNEXE_2 = {
     29: "=IFERROR(SUMIFS('Stock detaille'!G:G,'Stock detaille'!A:A,A{0},'Stock detaille'!K:K,\"RED\")/J{0},\"\")",  # Moins de 6 mois (RED)
     30: "=IFERROR(SUMIFS('Stock detaille'!G:G,'Stock detaille'!A:A,A{0},'Stock detaille'!K:K,\"ORANGE\")/J{0},\"\")",  # Entre 6 et 12 mois (ORANGE)
     31: "=IFERROR(SUMIFS('Stock detaille'!G:G,'Stock detaille'!A:A,A{0},'Stock detaille'!K:K,\"GREEN\")/J{0},\"\")",  # Plus de 12 mois (GREEN)
-    32: "=IF(AK{0}=0,\"\",SUMIFS('Plan d''appro'!J:J,'Plan d''appro'!A:A,A{0},'Plan d''appro'!F:F, AJ{0}))",  # Qtité attendue
+    32: "=IF(AK{0}=0,\"\",SUMIFS('Plan d''appro'!J:J,'Plan d''appro'!A:A,A{0},'Plan d''appro'!K:K, AK{0}))",  # Qtité attendue
     33: "=IFERROR(AF{0}/J{0},0)",  # MSD attendu
     34: '=SUMIFS(Receptions!H:H,Receptions!C:C,A{0},Receptions!J:J,"<>ok")',  # Qtité réceptionnés non en Stock
     35: "=IFERROR(AH{0}/J{0},0)",  # MSD reçu
