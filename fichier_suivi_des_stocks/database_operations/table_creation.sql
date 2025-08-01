@@ -379,14 +379,9 @@ suivi_stock.share_link
 	using btree (date_report);
 
 
--- stock_track
--- stock_track_dmm
--- stock_track_dmm_histo
--- stock_track_cmm
--- stock_track_cmm_histo
--- stock_track_prevision
-
--- PNLP, PNLS, PNLT, PNN, PNSME
--- Décembre 2024 
--- Janvier 2025
--- Février 2025
+-- ajouté récemment pour capter les informations du coût unitaire moyen qat
+-- et de la version du plan d'approvisionnement et de la date d'extraction
+alter table suivi_stock.plan_approv 
+	add column cout_unitaire_moyen_qat float4,
+	add column version_pa INTEGER,
+	add column date_extraction_pa date;
