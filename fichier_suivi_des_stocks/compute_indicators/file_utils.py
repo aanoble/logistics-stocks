@@ -23,10 +23,20 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
     # Fonction pour traiter un fichier unique
     def _process_pa_file(fichier):
         nonlocal data
+        version = None
         with open(file=fichier) as file:
             for line in file.readlines():
+                if version is None and "version" in line.lower():
+                    try:
+                        version = line.split(":")[-1].replace('"', "").strip()
+                        list_element = _process_pa_version(version)
+                    except IndexError:
+                        version = ""
+
                 if len(line.split(",")) == 17:
-                    data.append([col.replace('"', "") for col in line.strip().split(",")])
+                    data.append(
+                        [col.replace('"', "").strip() for col in line.split(",")] + list_element
+                    )
 
     if os.path.isdir(fp_plan_approv):
         for root, _, files in os.walk(fp_plan_approv):
@@ -36,7 +46,7 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
     else:
         _process_pa_file(fp_plan_approv)
 
-    df_plan_approv = pd.DataFrame(data[1:], columns=data[0])
+    df_plan_approv = pd.DataFrame(data[1:], columns=data[0][:-2] + ["version_pa", "date_extraction_pa"])
 
     # Bad index
     bad_index = df_plan_approv.loc[
@@ -83,7 +93,7 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
         columns={
             "Code QAT": "ID de produit QAT / Identifiant de produit (prévision)",
             "Code standard national": "Standard product code",
-            "Coût unitaire moyen (en dollar)": "cout_unitaire_moyen_qat", 
+            "Coût unitaire moyen (en dollar)": "cout_unitaire_moyen_qat",
             "Facteur de conversion QAT vers SAGE": "facteur_de_conversion_qat_sage",
             "Acronym": "acronym",
         },
@@ -97,7 +107,6 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
             [
                 "ID de produit QAT / Identifiant de produit (prévision)",
                 "Standard product code",
-                "cout_unitaire_moyen_qat",
                 "facteur_de_conversion_qat_sage",
                 "acronym",
             ]
@@ -105,7 +114,7 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
         on="ID de produit QAT / Identifiant de produit (prévision)",
         how="left",
     )
-    
+
     df_plan_approv.rename(
         columns={
             "ID de produit QAT / Identifiant de produit (prévision)": "ID de produit QAT",
@@ -118,6 +127,12 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
             "Coût total (USD)": "Couts totaux",
         },
         inplace=True,
+    )
+
+    df_plan_approv["cout_unitaire_moyen_qat"] = (
+        (df_plan_approv["Cout des Produits"] / df_plan_approv["Quantite"])
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0)
     )
 
     def _get_code_and_date_concate(row):
@@ -206,3 +221,35 @@ def process_etat_stock_npsp(
     df_etat_stock_npsp["programme"] = programme
 
     return df_etat_stock_npsp
+
+
+DATE_EXTRACT_PATTERN = re.compile(r"\((\w{3,9} \d{1,2} \d{4})\)")
+
+
+def _process_pa_version(pa_version: str):
+    """
+    Extracts the version number and date from the plan approval version string.
+    Args:
+        pa_version (str): The version string of the plan approval.
+
+    Returns:
+        list: A list containing the version number and date as a datetime object.
+    """
+
+    number, date_obj = None, None
+
+    # Utilisé pour extraire le nombre de début
+    if num_match := re.match(r"^\d+", pa_version):
+        number = int(num_match.group())
+
+    # Extraction de la date de la version du fichier du plan d'approvisionnement
+    if date_match := DATE_EXTRACT_PATTERN.findall(pa_version):
+        date_str = date_match[-1]
+        for fmt in ("%b %d %Y", "%B %d %Y", "%d-%b-%Y", "%d %b %Y"):
+            try:
+                date_obj = datetime.strptime(date_str, fmt)
+                break
+            except ValueError:
+                continue
+
+    return [number, date_obj]

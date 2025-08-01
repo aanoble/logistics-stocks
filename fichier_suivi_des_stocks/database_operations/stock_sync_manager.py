@@ -200,7 +200,6 @@ def synchronize_product_metadata(
         required_columns = {
             "Standard product code",
             "acronym",
-            "cout_unitaire_moyen_qat",
             "facteur_de_conversion_qat_sage",
         }
         if not required_columns.issubset(source_df.columns):
@@ -240,13 +239,11 @@ def synchronize_product_metadata(
             [
                 "id_dim_produit_stock_track_pk",
                 "designation_acronym_new",
-                "cout_unitaire_moyen_qat_new",
                 "facteur_de_conversion_qat_sage_new",
             ]
         ].rename(
             columns={
                 "designation_acronym_new": "designation_acronym",
-                "cout_unitaire_moyen_qat_new": "cout_unitaire_moyen_qat",
                 "facteur_de_conversion_qat_sage_new": "facteur_de_conversion_qat_sage",
             }
         )
@@ -256,7 +253,6 @@ def synchronize_product_metadata(
         UPDATE {schema_name}.dim_produit_stock_track 
         SET 
             designation_acronym = %s,
-            cout_unitaire_moyen_qat = %s,
             facteur_de_conversion_qat_sage = %s
         WHERE id_dim_produit_stock_track_pk = %s
         """
@@ -264,7 +260,6 @@ def synchronize_product_metadata(
         params = [
             (
                 convert_numpy_types(row["designation_acronym"]),
-                convert_numpy_types(row["cout_unitaire_moyen_qat"]),
                 convert_numpy_types(row["facteur_de_conversion_qat_sage"]),
                 convert_numpy_types(row["id_dim_produit_stock_track_pk"]),
             )
