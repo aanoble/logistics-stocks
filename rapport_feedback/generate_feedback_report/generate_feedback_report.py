@@ -913,7 +913,7 @@ def export_stock_region_to_sheet(
     date_report = date_report.replace(day=11)
     ws_acceuil["E12"] = (
         "Période: "
-        + dico_mois_fr[calendar.month_name[date_report.month]]
+        + dico_mois_fr[calendar.month_name[date_report.month - 1]]
         + " "
         + str(date_report.year)
     )
