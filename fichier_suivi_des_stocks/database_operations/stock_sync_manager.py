@@ -211,8 +211,10 @@ def synchronize_product_metadata(
             schema_name=schema_name,
             query=f"SELECT * FROM {schema_name}.dim_produit_stock_track WHERE programme = '{programme}'",
         )
-        source_df = source_df[list(required_columns)].rename(
-            columns={"acronym": "designation_acronym"}
+        source_df = (
+            source_df[list(required_columns)]
+            .rename(columns={"acronym": "designation_acronym"})
+            .drop_duplicates()
         )
         source_df.astype(
             {col: db_products[col].dtype for col in db_products if col in source_df.columns}

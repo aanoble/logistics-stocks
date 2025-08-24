@@ -268,7 +268,7 @@ def _get_etat_stock_second_part(
     # code_col = [col for col in df_receptions.columns if 'CODE' in str(col).upper()][0]
     df_etat_stock["Date Effective de Livraison Annexe 2"] = df_etat_stock.apply(
         lambda row: df_receptions.loc[
-            (df_receptions[code_col] == row["code_produit"])
+            (df_receptions["Nouveau code"] == row["code_produit"])
             & (
                 (df_receptions["Date_entree_machine"] >= date_report)
                 | (df_receptions["Date_entree_machine"].isna())

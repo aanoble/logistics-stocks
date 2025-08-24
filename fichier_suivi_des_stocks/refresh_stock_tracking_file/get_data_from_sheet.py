@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -14,9 +15,9 @@ def get_data_from_sheet(
     fp_suivi_stock: Path,
     sheet_name: str,
     sheetnames: list[str],
-    date_report: str | None = None,
-    programme: str | None = None,
-    src_wb: Workbook | None = None,
+    date_report: str,
+    programme: str,
+    src_wb: Workbook,
 ) -> pd.DataFrame:
     """Get data from a specific sheet in the stock tracking file.
 
@@ -96,6 +97,30 @@ def get_data_from_sheet(
         )
 
         df_receptions = pd.read_excel(fp_suivi_stock, sheet_name=sheet_reception)
+        df_receptions["Date_entree_machine"] = pd.to_datetime(
+            df_receptions["Date d'entrée en machine"], format="%d/%m/%Y", errors="coerce"
+        )
+
+        df_receptions["Nouveau code"] = pd.to_numeric(
+            df_receptions["Nouveau code"], errors="coerce"
+        ).astype(float)
+        # Mise à jour des valeurs de la colonne J
+        date_report_dt = datetime.strptime(date_report, "%Y-%m-%d")
+        for row in src_wb[sheet_reception].iter_rows(min_row=2, min_col=10, max_col=11):
+            for cell in row:
+                if has_formula(cell) and isinstance(cell.value, str) and "YEAR" in cell.value and "MONTH" in cell.value:
+                    if cell.row is not None:
+                        value = df_receptions["Date_entree_machine"].iloc[cell.row - 2]
+                        value = (
+                            "ok"
+                            if value is not None and hasattr(value, "year") and value.year == date_report_dt.year and value.month == date_report_dt.month
+                            else "skip"
+                        )
+                    else:
+                        value = "skip"
+
+                    if cell.row is not None and cell.column is not None:
+                        src_wb[sheet_reception].cell(row=cell.row, column=cell.column, value=value)
 
         return df_receptions
 
@@ -135,7 +160,7 @@ def get_data_from_sheet(
         for row in src_wb[sheet_approv].iter_rows(min_row=0, max_col=19):
             data = []
             for cell in row:
-                if cell.column_letter == "P":
+                if cell.column == 16:  # Column "P" is the 16th column
                     continue
                 if has_formula(cell):
                     result = interface.calc_cell(cell.coordinate, sheet_approv)
