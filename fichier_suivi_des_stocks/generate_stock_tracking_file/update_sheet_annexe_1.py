@@ -2,6 +2,7 @@ from typing import Tuple
 
 import pandas as pd
 from openpyxl import Workbook
+from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.worksheet.worksheet import Worksheet
@@ -86,7 +87,7 @@ def update_first_informations(
     for cell in header_row:
         if cell.value is None:
             continue
-        if cell.value.rstrip() in cols_df_prod:
+        if isinstance(cell.value, str) and cell.value.rstrip() in cols_df_prod:
             dico_cols[cell.value.rstrip()] = [
                 cell.column_letter,
                 cell.col_idx,
@@ -128,7 +129,9 @@ def update_first_informations(
 
     header_row = list(ws_annexe_1.iter_rows(min_row=3, max_row=3, min_col=10, max_col=20))[0]
 
-    dico_cols = {cell.value: cell.col_idx for cell in header_row}
+    dico_cols = {
+        cell.value: cell.col_idx for cell in header_row if not isinstance(cell, MergedCell)
+    }
 
     dico_formules = {
         "Distribution effectuée": "=SUMIFS('Distribution X3'!M:M,'Distribution X3'!I:I,A{0})",
@@ -228,6 +231,16 @@ def update_dmm_informations_on_sheet(
     )
 
     df_dmm_to_sheet.columns.name = ""
+
+    # Mettre les valeurs supérieures à la date cible à zéro
+    target_date = pd.to_datetime(date_report, format="%d/%m/%Y")
+    selected_columns = [
+        col
+        for col in df_dmm_to_sheet.columns
+        if col != "id_dim_produit_stock_track_pk" and pd.to_datetime(col) > target_date
+    ]
+    for col in selected_columns:
+        df_dmm_to_sheet[col] = 0.0
 
     assert (
         df_produit.merge(df_dmm_to_sheet, on="id_dim_produit_stock_track_pk", how="left").shape[0]
@@ -373,6 +386,16 @@ def update_cmm_informations_on_sheet(
         columns=lambda x: str(x).replace(" 00:00:00", "").lstrip() if " 00:00:00" in str(x) else x
     )
     df_cmm_to_sheet.columns.name = ""
+
+    # Mettre les valeurs supérieures à la date cible à zéro
+    target_date = pd.to_datetime(date_report, format="%d/%m/%Y")
+    selected_columns = [
+        col
+        for col in df_cmm_to_sheet.columns
+        if col != "id_dim_produit_stock_track_pk" and pd.to_datetime(col) > target_date
+    ]
+    for col in selected_columns:
+        df_cmm_to_sheet[col] = 0.0
 
     # Cette jointure pour garder l'ordre des données
     df_cmm_to_sheet = df_produit.merge(

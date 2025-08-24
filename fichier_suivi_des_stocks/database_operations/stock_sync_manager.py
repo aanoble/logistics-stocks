@@ -217,6 +217,10 @@ def synchronize_product_metadata(
         source_df.astype(
             {col: db_products[col].dtype for col in db_products if col in source_df.columns}
         )
+
+        for col in source_df.select_dtypes("O").columns:
+            source_df[col] = source_df[col].replace({pd.NaT: None})
+
         # Merge and update logic
         merged = source_df.merge(
             db_products,
@@ -226,11 +230,15 @@ def synchronize_product_metadata(
             suffixes=("_new", "_current"),
         ).round(2)
 
-        condition = ""
-        for col in [col for col in source_df.columns if col not in ["Standard product code"]]:
-            condition += f"(merged.{col}_new != merged.{col}_current) | "
-        condition = condition.strip("| ")
-        merged = merged.loc[eval(condition)]
+        mask = False  # masque initial
+        for col in [c for c in source_df.columns if c not in ["Standard product code"]]:
+            mask |= ~merged[f"{col}_new"].eq(merged[f"{col}_current"])
+
+        merged = merged.loc[mask]
+        merged = merged.loc[
+            merged["designation_acronym_new"].notna()
+        ]  # Afin de garantir l'intégrité des données
+
         if merged.empty:
             return "Aucune mise à jour des données à effectuer sur la table dim_produit"
 
@@ -313,6 +321,9 @@ def synchronize_table_data(
             if col in db_columns and source_df[col].dtype != db_columns[col].dtype:
                 source_df[col] = source_df[col].astype(db_columns[col].dtype)
 
+        for col in source_df.select_dtypes("O").columns:
+            source_df[col] = source_df[col].replace({pd.NaT: None})
+
         # Data synchronization workflow
         query = (
             f"SELECT * FROM {schema_name}.{table_name} WHERE programme = '{programme}'"
@@ -355,13 +366,12 @@ def synchronize_table_data(
         if updates.empty:
             return "Aucune mise à jour des données à effectuer"
 
-        condition = ""
-        for col in [col for col in source_df.columns if col not in merge_keys]:
-            condition += f"(updates.{col}_new != updates.{col}_current) | "
-        condition = condition.strip("| ")
+        mask = False  # masque booléen de base
 
-        updates = updates.round(2)
-        updates = updates.loc[eval(condition)]
+        for col in [c for c in source_df.columns if c not in merge_keys]:
+            mask |= ~updates[f"{col}_new"].round(2).eq(updates[f"{col}_current"].round(2))
+
+        updates = updates.loc[mask]
 
         # display(updates)
 

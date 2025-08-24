@@ -91,7 +91,7 @@ def update_sheet_annexe_2(
     )  # Date Probable de Livraison
 
     ws_annexe_2["AL3"].comment = Comment(
-        """=MIN.SI.ENS('Receptions'!F:F; 'Receptions'!C:C; A5; Receptions!J:J; "ok")""",
+        """=MAX.SI.ENS('Receptions'!F:F; 'Receptions'!C:C; A5; Receptions!J:J; "ok")""",
         author="author=",
     )  # Date effective de livraison
 

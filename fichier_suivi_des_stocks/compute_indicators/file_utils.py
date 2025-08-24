@@ -33,9 +33,9 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
                     except IndexError:
                         version = ""
 
-                if len(line.split(",")) == 17:
+                if len(line.split(",", 16)) == 17:
                     data.append(
-                        [col.replace('"', "").strip() for col in line.split(",")] + list_element
+                        [col.replace('"', "").strip() for col in line.split(",", 16)] + list_element
                     )
 
     if os.path.isdir(fp_plan_approv):
@@ -46,7 +46,9 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
     else:
         _process_pa_file(fp_plan_approv)
 
-    df_plan_approv = pd.DataFrame(data[1:], columns=data[0][:-2] + ["version_pa", "date_extraction_pa"])
+    df_plan_approv = pd.DataFrame(
+        data[1:], columns=data[0][:-2] + ["version_pa", "date_extraction_pa"]
+    )
 
     # Bad index
     bad_index = df_plan_approv.loc[

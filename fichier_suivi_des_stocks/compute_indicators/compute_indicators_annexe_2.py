@@ -233,13 +233,10 @@ def _get_etat_stock_second_part(
         else divide_if_error(row["Quantité correspondante"], row["DMM_CENTRAL"]),
         axis=1,
     )
-    code_col = [col for col in df_receptions.columns if "CODE" in str(col).upper()][0]
-    df_receptions["Date_entree_machine"] = pd.to_datetime(
-        df_receptions["Date d'entrée en machine"], format="%d/%m/%Y", errors="coerce"
-    )
+
     df_etat_stock["Qtité réceptionnés non en Stock Annexe 2"] = df_etat_stock["code_produit"].apply(
         lambda x: df_receptions.loc[
-            (df_receptions[code_col] == x)
+            (df_receptions["Nouveau code"] == x)
             & (
                 (df_receptions["Date_entree_machine"] > date_report)
                 | (df_receptions["Date_entree_machine"].isna())
@@ -258,12 +255,12 @@ def _get_etat_stock_second_part(
     df_etat_stock["Date Probable de Livraison Annexe 2"] = df_etat_stock.apply(
         lambda row: df_plan_approv.loc[
             (df_plan_approv["Standard product code"] == row["code_produit"])
-            & (df_plan_approv["DATE"] > eomonth),
+            & (df_plan_approv["DATE"] >= eomonth),
             "DATE",
         ].min()
         if not df_plan_approv.loc[
             (df_plan_approv["Standard product code"] == row["code_produit"])
-            & (df_plan_approv["DATE"] > eomonth)
+            & (df_plan_approv["DATE"] >= eomonth)
         ].empty
         else "",
         axis=1,
@@ -273,7 +270,7 @@ def _get_etat_stock_second_part(
         lambda row: df_receptions.loc[
             (df_receptions[code_col] == row["code_produit"])
             & (
-                (df_receptions["Date_entree_machine"] > date_report)
+                (df_receptions["Date_entree_machine"] >= date_report)
                 | (df_receptions["Date_entree_machine"].isna())
             ),
             "Date de réception effective",

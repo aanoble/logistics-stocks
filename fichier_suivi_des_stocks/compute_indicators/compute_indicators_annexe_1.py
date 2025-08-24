@@ -16,6 +16,39 @@ def get_etat_stock_current_month(
     df_receptions: pd.DataFrame,
     date_report: str,
 ) -> pd.DataFrame:
+    """
+    Calcule et enrichit les indicateurs de stock pour le mois courant à partir de plusieurs sources de données.
+    Cette fonction prend en entrée plusieurs DataFrames contenant des informations sur l'état du stock, les détails du stock,
+    les distributions, les PPI, les prélèvements, et les réceptions, ainsi qu'une date de rapport. Elle calcule pour chaque
+    produit les quantités distribuées, reçues, de PPI, prélevées pour contrôle qualité, le stock théorique final attendu et SAGE,
+    les écarts, et ajoute des colonnes pour la justification et les diligences.
+
+    Args:
+        df_etat_stock (pd.DataFrame): DataFrame principal contenant l'état du stock pour chaque produit.
+        df_stock_detaille (pd.DataFrame): DataFrame contenant les détails du stock physique par produit.
+        df_distribution (pd.DataFrame): DataFrame contenant les distributions effectuées par produit.
+        df_ppi (pd.DataFrame): DataFrame contenant les quantités de PPI par produit.
+        df_prelevement (pd.DataFrame): DataFrame contenant les prélèvements pour contrôle qualité par produit.
+        df_receptions (pd.DataFrame): DataFrame contenant les réceptions de produits en stock.
+        date_report (str): Date du rapport au format "YYYY-MM-DD".
+
+    Returns:
+        pd.DataFrame: DataFrame enrichi avec les indicateurs calculés pour le mois courant, incluant les colonnes :
+            - Distribution effectuée
+            - Quantité reçue entrée en stock
+            - Quantité de PPI
+            - Quantité prélévée en Contrôle Qualité (CQ)
+            - Ajustement de stock
+            - Stock Théorique Final SAGE
+            - Stock Théorique Final Attendu
+            - ECARTS
+            - Justification des écarts
+            - Diligences
+            - Dilig. Choisie
+    Raises:
+        KeyError: Si les colonnes attendues ne sont pas présentes dans les DataFrames d'entrée.
+        Exception: Pour toute erreur lors de la conversion des types de colonnes.
+    """
     try:
         df_etat_stock["Distribution effectuée"] = df_etat_stock["code_produit"].apply(
             lambda x: df_distribution.loc[df_distribution.Article == x, "Quantité livrée"].sum()
@@ -26,19 +59,13 @@ def get_etat_stock_current_month(
         )
 
     # A modifier ici
-    date_report = pd.to_datetime(date_report, format="%Y-%m-%d")
+    date_report_dt = pd.to_datetime(date_report, format="%Y-%m-%d")
 
-    df_receptions["Date_entree_machine"] = pd.to_datetime(
-        df_receptions["Date d'entrée en machine"], format="%d/%m/%Y", errors="coerce"
-    )
-
-    code_col = [col for col in df_receptions.columns if "CODE" in str(col).upper()][0]
-    
     df_etat_stock["Quantité reçue entrée en stock"] = df_etat_stock["code_produit"].apply(
         lambda x: df_receptions.loc[
-            (df_receptions[code_col] == x)
-            & (df_receptions["Date_entree_machine"].dt.month == date_report.month)
-            & (df_receptions["Date_entree_machine"].dt.year == date_report.year),
+            (df_receptions["Nouveau code"] == x)
+            & (df_receptions["Date_entree_machine"].dt.month == date_report_dt.month)
+            & (df_receptions["Date_entree_machine"].dt.year == date_report_dt.year),
             "Quantité réceptionnée",
         ].sum()
     )

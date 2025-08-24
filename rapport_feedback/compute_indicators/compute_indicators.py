@@ -3,7 +3,9 @@ import calendar
 import numpy as np
 import pandas as pd
 from openhexa.sdk import workspace
+
 # from IPython.display import display
+
 
 def generate_month_end_report_date(date_report: str):
     """Génère la date de fin de mois pour un rapport à partir d'un nom de mois localisé."""
@@ -42,7 +44,7 @@ def find_best_matching_sheet_name(sheet_name, sheet_names, threshold=95):
     Permet de vérifier si la feuille est présente dans la liste des classeurs du fichier qui a été fourni.
     Dans le cas contraire, un recherche par correspondance floue est effectuée pour voir s'il existe un semblable de nom qui se peut être mal orthographié pour le fournir en sortie.
     """
-    from fuzzywuzzy import fuzz, process
+    from fuzzywuzzy import fuzz, process  # type: ignore
 
     try:
         if sheet_name in sheet_names:
@@ -79,7 +81,10 @@ def convert_reporting_period_to_cutoff_date(period_name: str, facility: str):
         "octobre decembre": 12,
     }
 
-    mois = month_number.get(period_name[:-5].lower(), None) + 1
+    mois = month_number.get(period_name[:-5].lower(), None)
+    if mois is None:
+        raise ValueError(f"Période de reporting inconnue: {period_name}")
+    mois += 1
     annee = int(period_name[-4:])
     if mois > 12:
         annee += 1
@@ -90,7 +95,9 @@ def convert_reporting_period_to_cutoff_date(period_name: str, facility: str):
     return datetime.strptime(str(mois) + "/" + str(7) + "/" + str(annee), "%m/%d/%Y")
 
 
-def count_valid_submissions_by_criteria(extract_transmission, element_col, code, program, column_type_table, value_type_table):
+def count_valid_submissions_by_criteria(
+    extract_transmission, element_col, code, program, column_type_table, value_type_table
+):
     """Compte les soumissions valides selon des critères."""
     if element_col == "NA":
         return "NA"
@@ -115,7 +122,7 @@ def calculate_completeness_promptness_metrics(
     extract_transmission: pd.DataFrame, expected_site: pd.DataFrame, type_table: str = "completude"
 ) -> pd.DataFrame:
     """Calcule les indicateurs de complétude et de ponctualité des rapports"""
-    
+
     df = expected_site.copy().sort_values(by=["Region", "Code"])
     df = df.drop(columns="District")
     if type_table == "completude":
@@ -149,7 +156,12 @@ def calculate_completeness_promptness_metrics(
         try:
             df[column] = df[[column, "Code"]].apply(
                 lambda x: count_valid_submissions_by_criteria(
-                    extract_transmission, x[0], x["Code"], program, column_type_table, value_type_table
+                    extract_transmission,
+                    x[0],
+                    x["Code"],
+                    program,
+                    column_type_table,
+                    value_type_table,
                 ),
                 axis=1,
             )
@@ -182,8 +194,8 @@ def calculate_completeness_promptness_metrics(
             df[new_column] = df.apply(
                 lambda x: 0
                 if x[column] == "NA" or x[column] == 0
-                else (x[column] / df_group.loc[df_group.Region == x["Region"], "Code"].iloc[0])
-                if not df_group.loc[df_group.Region == x["Region"], "Code"].empty
+                else (x[column] / df_group.loc[df_group.Region == x["Region"], "Code"].iloc[0])  # type: ignore
+                if not df_group.loc[df_group.Region == x["Region"], "Code"].empty  # type: ignore
                 else 0,
                 axis=1,
             )
@@ -217,7 +229,7 @@ def calculate_completeness_promptness_metrics(
     if "PNLT" not in df.columns:
         cols_pnlt = list(dico_cols_pnlt)
         df_melt = pd.melt(
-            df.drop(columns="Code"), id_vars="Region", value_vars=cols_pnlt, value_name="Code"
+            df.drop(columns="Code"), id_vars=["Region"], value_vars=cols_pnlt, value_name="Code"
         )
         df_group = (
             df_melt.loc[df_melt.Code.ne("NA"), ["Region", "Code"]]
@@ -227,8 +239,8 @@ def calculate_completeness_promptness_metrics(
         )
         df["Taux par Région PNLT"] = df.apply(
             lambda x: sum([x[e] for e in cols_pnlt if x[e] != "NA"])
-            / df_group.loc[df_group.Region == x["Region"], "Code"].iloc[0]
-            if not df_group.loc[df_group.Region == x["Region"], "Code"].empty
+            / df_group.loc[df_group.Region == x["Region"], "Code"].iloc[0]  # type: ignore
+            if not df_group.loc[df_group.Region == x["Region"], "Code"].empty  # type: ignore
             else 0,
             axis=1,
         )
@@ -341,13 +353,13 @@ def compute_indicators_completeness_and_promptness(
         )
 
     except Exception:
-        extract_transmission["date_soumission"] = extract_transmission["date_soumission"].str.replace(
-            "T00:00:00Z", ""
-        )
+        extract_transmission["date_soumission"] = extract_transmission[
+            "date_soumission"
+        ].str.replace("T00:00:00Z", "")
 
-        extract_transmission["date_autorisation"] = extract_transmission["date_autorisation"].str.replace(
-            "T00:00:00Z", ""
-        )
+        extract_transmission["date_autorisation"] = extract_transmission[
+            "date_autorisation"
+        ].str.replace("T00:00:00Z", "")
 
         extract_transmission["date_soumission"] = pd.to_datetime(
             extract_transmission["date_soumission"], format="%Y-%m-%d"
@@ -365,7 +377,7 @@ def compute_indicators_completeness_and_promptness(
 
     extract_transmission["facility"] = (
         extract_transmission["facility"]
-        .str.replace(r'\b(PNSME|PHG|PCS|CMU)\b', '', regex=True)
+        .str.replace(r"\b(PNSME|PHG|PCS|CMU)\b", "", regex=True)
         .str.strip()
     )
 
@@ -387,17 +399,21 @@ def compute_indicators_completeness_and_promptness(
         ["Transmis", "Date limite", "date_autorisation"]
     ].apply(lambda x: 1 if x[1] >= x[2] and x[0] == "OUI" else 0, axis=1)
 
-    detail_completness = calculate_completeness_promptness_metrics(extract_transmission, expected_site)
+    detail_completness = calculate_completeness_promptness_metrics(
+        extract_transmission, expected_site
+    )
     detail_completness["Indicateur type"] = "Completude"
 
-    detail_promptitude = calculate_completeness_promptness_metrics(extract_transmission, expected_site, "Promptitude")
+    detail_promptitude = calculate_completeness_promptness_metrics(
+        extract_transmission, expected_site, "Promptitude"
+    )
     detail_promptitude["Indicateur type"] = "Promptitude"
 
     df_dq = pd.concat([detail_completness, detail_promptitude])
 
     # completude_promptitude_par_ets
     # df_dq["PNSME"] = df_dq["PNSME-GRAT"] # modification apportée
-    
+
     df_ets = (
         df_dq.drop(
             columns=[e for e in df_dq.columns if "Taux par Région" in e or e in ("Attendu", "Recu")]
@@ -444,7 +460,7 @@ def compute_indicators_completeness_and_promptness(
         .groupby(["Region", "Indicateur type"])
         .sum()
         .reset_index()
-        .rename(columns={"PNSME-GRAT": "PNSME"}) #ajout
+        .rename(columns={"PNSME-GRAT": "PNSME"})  # ajout
     )
 
     # if "PNSME-GRAT" in df_group.columns:
@@ -496,7 +512,7 @@ def compute_indicators_completeness_and_promptness(
     del df_group
 
     programme = ["PNLP", "PNSME", "PNN", "PNLT"]  # , 'PNLS']
-    col_pnsme = ["PNSME-GRAT"] # [col for col in df_ets.columns if "PNSME" in col.upper()]
+    col_pnsme = ["PNSME-GRAT"]  # [col for col in df_ets.columns if "PNSME" in col.upper()]
     col_pnlt = (
         [col for col in df_ets.columns if col in ("TBS", "TBMR", "TBLAB")]
         if "PNLT" not in df_ets.columns
@@ -509,7 +525,7 @@ def compute_indicators_completeness_and_promptness(
 
             df_melt = pd.melt(
                 df_ets.drop(columns="Code"),
-                id_vars="Indicateur type",
+                id_vars=["Indicateur type"],
                 value_vars=cols,
                 value_name="Code",
             )
@@ -553,7 +569,7 @@ def compute_indicators_completeness_and_promptness(
         ]
         if date_report.month in (3, 6, 9, 12)
         else ["ARV", "TRC", "LAB", "CHARGE VIRALE", "PNLP", "PNSME-GRAT", "PNN"]
-    ) # "PNSME"
+    )  # "PNSME"
 
     df_ets["sum_produit_inline"] = df_ets.apply(
         lambda row: sum(
@@ -597,9 +613,10 @@ def compute_indicators_completeness_and_promptness(
 
     return df_ets, df_region
 
+
 def analyze_product_stock_status_indicators(df_prod_traceurs, df_etat_stock, date_report):
     """Analyse les indicateurs clés de gestion des stocks produits."""
-    
+
     df_prod_traceurs = df_prod_traceurs[
         ["CODE PRODUIT", "PRODUIT", "PROGRAMME", "CODE COMBINE", "CATEGORIE PRODUIT"]
     ]
@@ -650,22 +667,87 @@ def analyze_product_stock_status_indicators(df_prod_traceurs, df_etat_stock, dat
     #  ("ALBENDAZOLE 400 mg comp. UN  -", 3050002)]
     # Les id correspondent aux id de certains districts dans eSIGL (district_id) pour faire des vérifications
     # ou étendre la liste voir le script suivant dans metabase """select * from vw_districts vw join geographic_zones gz on vw.district_id = gz.id where gz.levelid=3 """
-    
+
     dds_routine_pnn = [
-        24, 25, 34, 101, 102, 28, 49, 152, 71, 98, 30,
-        87, 93, 92, 55, 94, 97, 100, 133, 138, 74, 47,
-        129, 77, 131, 65, 59, 112, 80, 103, 113, 130,
-        76, 60, 85, 51, 63, 67, 70, 50, 68, 78, 52,
-        66, 99, 118, 54, 75, 82, 43, 88, 104, 121,
-        42, 120, 40, 56, 132, 107, 64, 108, 89, 125,
-        69, 126, 115, 116, 84, 90, 26, 27, 62, 110
+        24,
+        25,
+        34,
+        101,
+        102,
+        28,
+        49,
+        152,
+        71,
+        98,
+        30,
+        87,
+        93,
+        92,
+        55,
+        94,
+        97,
+        100,
+        133,
+        138,
+        74,
+        47,
+        129,
+        77,
+        131,
+        65,
+        59,
+        112,
+        80,
+        103,
+        113,
+        130,
+        76,
+        60,
+        85,
+        51,
+        63,
+        67,
+        70,
+        50,
+        68,
+        78,
+        52,
+        66,
+        99,
+        118,
+        54,
+        75,
+        82,
+        43,
+        88,
+        104,
+        121,
+        42,
+        120,
+        40,
+        56,
+        132,
+        107,
+        64,
+        108,
+        89,
+        125,
+        69,
+        126,
+        115,
+        116,
+        84,
+        90,
+        26,
+        27,
+        62,
+        110,
     ]
 
     df_etat_stock["check_prod_pnn"] = df_etat_stock.apply(
         lambda row: 0
         if row.abrv_programme == "PNN"
-        and row.code_produit
-        in (3050002, 3150049, 3050002)
+        and row.code_produit in (3050002, 3150049, 3050002)
         and row.id_district_esigl not in dds_routine_pnn
         else 1,
         axis=1,
@@ -715,7 +797,7 @@ def analyze_product_stock_status_indicators(df_prod_traceurs, df_etat_stock, dat
 
     df_etat_stock["ETAT DU STOCK"] = df_etat_stock["ETAT DU STOCK"].fillna("NA")
 
-    def calcul_quantite(row):
+    def calcul_quantite_cmm_urgente(row):
         if row.abrv_programme == "PNLT" and (
             row["ETAT DU STOCK"] == "EN BAS DU PCU" or row["sdu"] == 0
         ):  # (row['ETAT DU STOCK'] in ('EN BAS DU PCU', 'RUPTURE')):
@@ -727,9 +809,11 @@ def analyze_product_stock_status_indicators(df_prod_traceurs, df_etat_stock, dat
         else:
             return np.nan
 
-    df_etat_stock["BESOIN CMMMANDE URGENTE"] = df_etat_stock.apply(calcul_quantite, axis=1)
+    df_etat_stock["BESOIN CMMMANDE URGENTE"] = df_etat_stock.apply(
+        calcul_quantite_cmm_urgente, axis=1
+    )
 
-    def calcul_quantite(row):
+    def calcul_quantite_transfert_in(row):
         if row.abrv_programme == "PNLT" and (
             row["ETAT DU STOCK"] or row["sdu"] == 0
         ):  # in ('EN BAS DU PCU', 'RUPTURE')):
@@ -741,9 +825,9 @@ def analyze_product_stock_status_indicators(df_prod_traceurs, df_etat_stock, dat
         else:
             return np.nan
 
-    df_etat_stock["BESOIN TRANSFERT IN"] = df_etat_stock.apply(calcul_quantite, axis=1)
+    df_etat_stock["BESOIN TRANSFERT IN"] = df_etat_stock.apply(calcul_quantite_transfert_in, axis=1)
 
-    def calcul_quantite(row):
+    def calcul_quantite_transfert_out(row):
         if row["ETAT DU STOCK"] == "ND":
             return np.nan
         elif row["ETAT DU STOCK"] in ("STOCK DORMANT", "SURSTOCK"):
@@ -754,9 +838,11 @@ def analyze_product_stock_status_indicators(df_prod_traceurs, df_etat_stock, dat
         else:
             return np.nan
 
-    df_etat_stock["QUANTITE A TRANSFERER OUT"] = df_etat_stock.apply(calcul_quantite, axis=1)
+    df_etat_stock["QUANTITE A TRANSFERER OUT"] = df_etat_stock.apply(
+        calcul_quantite_transfert_out, axis=1
+    )
 
-    del calcul_quantite
+    del calcul_quantite_cmm_urgente, calcul_quantite_transfert_in, calcul_quantite_transfert_out
 
     df_etat_stock.rename(
         columns={
@@ -919,7 +1005,7 @@ def analyze_product_stock_status_indicators(df_prod_traceurs, df_etat_stock, dat
         lambda prog: df_etat_stock.loc[
             (df_etat_stock.PROGRAMME == prog) & (df_etat_stock["ETAT DU STOCK"] != "RUPTURE")
         ].shape[0]
-        / df_count_prog.loc[df_count_prog["Programme"] == prog, "count"].values[0]
+        / df_count_prog.loc[df_count_prog["Programme"] == prog, "count"].values[0]  # noqa: F821
     )
     df_ = (
         df_etat_stock["PROGRAMME"]
@@ -939,9 +1025,9 @@ def analyze_product_stock_status_indicators(df_prod_traceurs, df_etat_stock, dat
             & (df_etat_stock["CATEGORIE PRODUIT"].str.upper() == "PRODUIT TRACEUR")
             & (df_etat_stock["ETAT DU STOCK"] != "RUPTURE")
         ].shape[0]
-        / df_count_prog.loc[df_count_prog["Programme"] == prog, "count"].values[0]
+        / df_count_prog.loc[df_count_prog["Programme"] == prog, "count"].values[0]  # noqa: F821
     )  # Bien mais pour l'heure pas optimale
-    
+
     df_ = (
         df_etat_stock.loc[
             (df_etat_stock["CATEGORIE PRODUIT"].str.upper() == "PRODUIT TRACEUR"), "PROGRAMME"
@@ -950,7 +1036,7 @@ def analyze_product_stock_status_indicators(df_prod_traceurs, df_etat_stock, dat
         .reset_index()
         .rename(columns={"PROGRAMME": "Programme"})
     )
-    
+
     stock_lvl_decent["dispo_traceur"] = stock_lvl_decent.apply(
         lambda row: row.dispo_traceur
         / df_.loc[df_["Programme"] == row.Programme, "count"].values[0],
@@ -1030,7 +1116,7 @@ def analyze_product_stock_status_indicators(df_prod_traceurs, df_etat_stock, dat
                 return "SURSTOCK"
             else:
                 return "ND"
-        except:
+        except Exception:
             return "ND"
 
     stock_region["STATUT"] = stock_region.apply(get_statut_stock_region, axis=1)
@@ -1100,7 +1186,7 @@ def aggregate_regional_stock_availability_metrics(stock_lvl_decent, stock_region
     def get_dispo_global(row):
         if row.Region == "NATIONAL":
             total_codes_programme = (
-                df.loc[df.Programme == row.Programme, "Code"].unique().shape[0] - 1
+                df.loc[df.Programme == row.Programme, "Code"].unique().shape[0] - 1  # type: ignore
                 if row.Programme != "TOUS"
                 else df["Code"].unique().shape[0] - 1
             )
@@ -1108,14 +1194,14 @@ def aggregate_regional_stock_availability_metrics(stock_lvl_decent, stock_region
                 df.loc[
                     (df.lvl_decent_statut == "RUPTURE") & (df.Programme == row.Programme), "Code"
                 ]
-                .unique()
+                .unique()  # type: ignore
                 .shape[0]
                 if row.Programme != "TOUS"
                 else df.loc[(df.lvl_decent_statut == "RUPTURE"), "Code"].unique().shape[0]
             )
         else:
             total_codes_programme = (
-                df.loc[df.Programme == row.Programme, "Code"].unique().shape[0] - 1
+                df.loc[df.Programme == row.Programme, "Code"].unique().shape[0] - 1  # type: ignore
                 if row.Programme != "TOUS"
                 else df["Code"].unique().shape[0] - 1
             )
@@ -1126,11 +1212,11 @@ def aggregate_regional_stock_availability_metrics(stock_lvl_decent, stock_region
                     & (df.Programme == row.Programme),
                     "Code",
                 ]
-                .unique()
+                .unique()  # type: ignore
                 .shape[0]
                 if row.Programme != "TOUS"
                 else df.loc[(df.Region == row.Region) & (df.STATUT == "RUPTURE"), "Code"]
-                .unique()
+                .unique()  # type: ignore
                 .shape[0]
             )
 
@@ -1177,7 +1263,7 @@ def aggregate_regional_stock_availability_metrics(stock_lvl_decent, stock_region
                     (df.Programme == row.Programme) & (df.Categorie_produit == "Produit traceur"),
                     "Code",
                 ]
-                .unique()
+                .unique()  # type: ignore
                 .shape[0]
                 if row.Programme != "TOUS"
                 else df.loc[(df.Categorie_produit == "Produit traceur"), "Code"].unique().shape[0]
@@ -1190,7 +1276,7 @@ def aggregate_regional_stock_availability_metrics(stock_lvl_decent, stock_region
                     & (df.Categorie_produit == "Produit traceur"),
                     "Code",
                 ]
-                .unique()
+                .unique()  # type: ignore
                 .shape[0]
                 if row.Programme != "TOUS"
                 else df.loc[
@@ -1199,7 +1285,7 @@ def aggregate_regional_stock_availability_metrics(stock_lvl_decent, stock_region
                     & (df.Categorie_produit == "Produit traceur"),
                     "Code",
                 ]
-                .unique()
+                .unique()  # type: ignore
                 .shape[0]
             )
 
