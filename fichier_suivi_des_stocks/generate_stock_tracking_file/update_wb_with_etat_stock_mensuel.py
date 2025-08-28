@@ -23,7 +23,7 @@ def update_data_on_sheet(wb_base, ws_base, ws_temp, sheet_name, programme, date_
     dico_cols = {}
 
     if sheet_name == "Etat de stock":
-        ws_temp["B1"].value = ws_temp["B1"].value.replace("PNLS", programme.upper())
+        ws_temp["B1"].value = ws_temp["B1"].value.replace("PNLP", programme.upper())
         ws_temp["B4"].value = ws_temp["B4"].value.replace("JUILLET 2024", month_year_str)
         if programme.upper() == "PNLT":
             ws_temp["B4"].value = ws_temp["B4"].value.replace(
