@@ -132,6 +132,7 @@ def get_dmm_current_month(
     date_report: str,
     engine: Engine,
     schema_name: str = "suivi_stock",
+    auto_computed_dmm: bool = True,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Obtient les informations de DMM du mois courant.
@@ -142,6 +143,7 @@ def get_dmm_current_month(
         date_report (str): Date de rapport (format 'YYYY-MM-DD').
         engine: Objet de connexion SQLAlchemy.
         schema_name (str, optional): Schéma de la base de données. Defaults to "suivi_stock".
+        auto_computed_dmm (bool, optional): Indique si la DMM doit être calculée automatiquement. Defaults to True.
 
     Returns:
         Tuple[pd.DataFrame, pd.DataFrame]: df_dmm_current et df_dmm_histo.
@@ -218,18 +220,20 @@ def get_dmm_current_month(
         how="left",
     )
 
-    def compute_distributions(row):
+    def compute_distributions(row, auto_computed_dmm: bool = True):
         if pd.isna(row.nbre_mois_consideres):
             return np.nan
         # Générer la série des mois (en début de mois) entre date_report_prev_min et date_report
-        months = pd.date_range(start=row.date_report_prev_min, end=row.date_report, freq="MS")[1:]
+        months = pd.date_range(start=row.date_report_prev_min, end=row.date_report, freq="MS")
+        months = months[1:] if auto_computed_dmm else months[:-1]
         # Somme des distributions validées pour les mois correspondants
         total = df_dmm_histo.loc[
             (df_dmm_histo.id_dim_produit_stock_track_pk == row.id_dim_produit_stock_track_pk)
             & (df_dmm_histo.date_report_prev.isin(months)),
             "dmm",
         ].sum()
-        return total + row.dmm
+        value = total + row.dmm if auto_computed_dmm else total
+        return value
 
     # Vectorisation de la mise à jour de nbre_mois_consideres :
     # 1. Pour les lignes où nbre_mois_consideres est NaN et dmm n'est pas NaN, on assigne 1.
@@ -245,7 +249,7 @@ def get_dmm_current_month(
     df_dmm_current.loc[mask, "nbre_mois_consideres"] += 1
 
     df_dmm_current["distributions_mois_consideres"] = df_dmm_current.apply(
-        compute_distributions, axis=1
+        lambda row: compute_distributions(row, auto_computed_dmm), axis=1
     )
 
     # Calcul de la DMM calculée
@@ -270,22 +274,28 @@ def get_dmm_current_month(
         ]
     ].rename(columns={"id_dim_produit_stock_track_pk": "id_dim_produit_stock_track_fk"})
 
-    df_dmm_histo = df_dmm_histo.loc[
-        df_dmm_histo["date_report_prev"] > df_dmm_histo["date_report_prev_min"],
-        ["id_dim_produit_stock_track_fk", "date_report", "date_report_prev", "dmm"],
-    ]
+    if auto_computed_dmm:
+        df_dmm_histo = df_dmm_histo.loc[
+            df_dmm_histo["date_report_prev"] > df_dmm_histo["date_report_prev_min"],
+            ["id_dim_produit_stock_track_fk", "date_report", "date_report_prev", "dmm"],
+        ]
 
-    df_dmm_current["date_report_prev"] = df_dmm_current["date_report"]
-    cols = ["id_dim_produit_stock_track_fk", "date_report", "date_report_prev", "dmm"]
-    df_dmm_histo = pd.concat(
-        [
-            df_dmm_histo[cols],
-            df_dmm_current[cols],
-        ],
-        ignore_index=True,
-    ).sort_values(["id_dim_produit_stock_track_fk", "date_report_prev"])
+        df_dmm_current["date_report_prev"] = df_dmm_current["date_report"]
+        cols = ["id_dim_produit_stock_track_fk", "date_report", "date_report_prev", "dmm"]
+        df_dmm_histo = pd.concat(
+            [
+                df_dmm_histo[cols],
+                df_dmm_current[cols],
+            ],
+            ignore_index=True,
+        ).sort_values(["id_dim_produit_stock_track_fk", "date_report_prev"])
 
-    df_dmm_current.drop(columns="date_report_prev", inplace=True)
+        df_dmm_current.drop(columns="date_report_prev", inplace=True)
+    else:
+        cols = ["id_dim_produit_stock_track_fk", "date_report", "date_report_prev", "dmm"]
+        df_dmm_histo = df_dmm_histo[cols].sort_values(
+            ["id_dim_produit_stock_track_fk", "date_report_prev"]
+        )
 
     return df_dmm_current.round(2), df_dmm_histo.round(2)
 
@@ -297,6 +307,7 @@ def get_cmm_current_month(
     date_report: str,
     engine: Engine,
     schema_name: str = "suivi_stock",
+    auto_computed_cmm: bool = True,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Obtient les informations de DMM du mois courant.
@@ -308,6 +319,7 @@ def get_cmm_current_month(
         date_report (str): Date de rapport (format 'YYYY-MM-DD').
         engine: Objet de connexion SQLAlchemy.
         schema_name (str, optional): Schéma de la base de données. Defaults to "suivi_stock".
+        auto_computed_cmm (bool, optional): Indique si la CMM doit être calculée automatiquement. Defaults to True.
 
     Returns:
         Tuple[pd.DataFrame, pd.DataFrame]: df_cmm_current et df_cmm_histo.
@@ -413,18 +425,20 @@ def get_cmm_current_month(
         how="left",
     )
 
-    def compute_consommations(row):
+    def compute_consommations(row, auto_computed_cmm: bool = True):
         if pd.isna(row.nbre_mois_consideres):
             return np.nan
         # Générer la série des mois (en début de mois) entre date_report_prev_min et date_report
-        months = pd.date_range(start=row.date_report_prev_min, end=row.date_report, freq="MS")[1:]
+        months = pd.date_range(start=row.date_report_prev_min, end=row.date_report, freq="MS")
+        months = months[1:] if auto_computed_cmm else months[1:]
         # Somme des distributions validées pour les mois correspondants
         total = df_cmm_histo.loc[
             (df_cmm_histo.id_dim_produit_stock_track_pk == row.id_dim_produit_stock_track_pk)
             & (df_cmm_histo.date_report_prev.isin(months)),
             "cmm",
         ].sum()
-        return total + row.cmm
+        value = total + row.cmm if auto_computed_cmm else total
+        return value
 
     # Vectorisation de la mise à jour de nbre_mois_consideres :
     df_cmm_current["nbre_mois_consideres"] = np.where(
@@ -437,7 +451,9 @@ def get_cmm_current_month(
     )
     df_cmm_current.loc[mask, "nbre_mois_consideres"] += 1
 
-    df_cmm_current["conso_mois_consideres"] = df_cmm_current.apply(compute_consommations, axis=1)
+    df_cmm_current["conso_mois_consideres"] = df_cmm_current.apply(
+        lambda row: compute_consommations(row, auto_computed_cmm), axis=1
+    )
 
     df_cmm_current["cmm_calculee"] = df_cmm_current.apply(
         lambda row: row.conso_mois_consideres / row.nbre_mois_consideres
@@ -460,22 +476,28 @@ def get_cmm_current_month(
         ]
     ].rename(columns={"id_dim_produit_stock_track_pk": "id_dim_produit_stock_track_fk"})
 
-    df_cmm_histo = df_cmm_histo.loc[
-        df_cmm_histo["date_report_prev"] > df_cmm_histo["date_report_prev_min"],
-        ["id_dim_produit_stock_track_fk", "date_report", "date_report_prev", "cmm"],
-    ]
-    df_cmm_current["date_report_prev"] = df_cmm_current["date_report"]
+    if auto_computed_cmm:
+        df_cmm_histo = df_cmm_histo.loc[
+            df_cmm_histo["date_report_prev"] > df_cmm_histo["date_report_prev_min"],
+            ["id_dim_produit_stock_track_fk", "date_report", "date_report_prev", "cmm"],
+        ]
+        df_cmm_current["date_report_prev"] = df_cmm_current["date_report"]
 
-    cols = ["id_dim_produit_stock_track_fk", "date_report", "date_report_prev", "cmm"]
+        cols = ["id_dim_produit_stock_track_fk", "date_report", "date_report_prev", "cmm"]
 
-    df_cmm_histo = pd.concat(
-        [
-            df_cmm_histo[cols],
-            df_cmm_current[cols],
-        ],
-        ignore_index=True,
-    ).sort_values(["id_dim_produit_stock_track_fk", "date_report_prev"])
+        df_cmm_histo = pd.concat(
+            [
+                df_cmm_histo[cols],
+                df_cmm_current[cols],
+            ],
+            ignore_index=True,
+        ).sort_values(["id_dim_produit_stock_track_fk", "date_report_prev"])
 
-    df_cmm_current.drop(columns="date_report_prev", inplace=True)
+        df_cmm_current.drop(columns="date_report_prev", inplace=True)
+    else:
+        cols = ["id_dim_produit_stock_track_fk", "date_report", "date_report_prev", "cmm"]
+        df_cmm_histo = df_cmm_histo[cols].sort_values(
+            ["id_dim_produit_stock_track_fk", "date_report_prev"]
+        )
 
     return df_cmm_current.round(2), df_cmm_histo.round(2)

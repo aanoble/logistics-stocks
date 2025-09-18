@@ -80,10 +80,10 @@ def run_notebook(fp_suivi_stock, month_report, year_report, programme):
     )
     output_path = (
         Path(workspace.files_path)
-        / f"Fichier Suivi de Stock/code/pipelines/output_notebook_execution/actualisation fichier suivi stock/{programme}"
+        / f"Fichier Suivi de Stock/code/pipelines/output_notebook_execution/refresh fichier suivi stock/{programme}"
     )
     output_path.mkdir(parents=True, exist_ok=True)
-    output_path = output_path / f"output_actualisation_fst_{timestamp}.ipynb"
+    output_path = output_path / f"output_refresh_fst_{timestamp}.ipynb"
     pm.execute_notebook(
         input_path=input_path.as_posix(),
         output_path=output_path.as_posix(),

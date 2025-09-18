@@ -183,6 +183,7 @@ def update_dmm_informations_on_sheet(
     df_dmm_histo,
     df_produit,
     date_report,
+    auto_computed_dmm: bool = True,
 ) -> Tuple[Worksheet, pd.DataFrame]:
     """
     Met à jour les informations DMM sur la feuille de calcul "Annexe 1 - Consolidation".
@@ -192,6 +193,7 @@ def update_dmm_informations_on_sheet(
         df_dmm_global (DataFrame): Le DataFrame contenant les informations globales de Distributions.
         df_dmm_histo (DataFrame): Le DataFrame contenant les informations historiques des Distributions sélectionnées.
         df_produit (DataFrame): Le DataFrame contenant les informations des produits.
+        auto_computed_dmm (bool, optional): Indique si la DMM doit être calculée automatiquement. Defaults to True.
     Returns:
         Tuple[Worksheet, pd.DataFrame]: La feuille de calcul mise à jour et le DataFrame des produits.
     """
@@ -292,13 +294,15 @@ def update_dmm_informations_on_sheet(
     ):
         for col, element in dico_cols.items():
             if col == date_format.strftime("%Y-%m-%d"):
-                column_element = element if not isinstance(element, list) else element[1]
+                column_element = element[1] if isinstance(element, list) else element
                 cell = ws_annexe_1.cell(row=start, column=column_element, value=f"=$J{start}")
                 apply_format_on_dmm_cell(cell)
 
                 # Il faut également faire des mise à jour de la cellule droite
-                cell = ws_annexe_1.cell(row=start, column=column_element + 1, value="X")
+                value = "X" if auto_computed_dmm else None
+                cell = ws_annexe_1.cell(row=start, column=column_element + 1, value=value)
                 apply_format_on_dmm_cell(cell, True)
+
             elif not isinstance(element, int):
                 cell = ws_annexe_1.cell(row=start, column=element[1], value=row[element[2]])
                 apply_format_on_dmm_cell(cell)
@@ -351,9 +355,10 @@ def update_cmm_informations_on_sheet(
     df_cmm_histo: pd.DataFrame,
     df_produit: pd.DataFrame,
     date_report: str,
+    auto_computed_cmm: bool = True,
 ):
-    """
-    Met à jour les informations de CMM (Consommation Moyenne Mensuelle) sur la feuille annexe 1 d'un classeur Excel.
+    """Met à jour les informations de CMM (Consommation Moyenne Mensuelle) sur la feuille annexe 1 d'un classeur Excel.
+    
     Args:
         wb_temp (Workbook): Le classeur Excel temporaire à mettre à jour.
         df_dmm_global (pd.DataFrame): DataFrame contenant les données globales de DMM (Demande Moyenne Mensuelle).
@@ -362,6 +367,8 @@ def update_cmm_informations_on_sheet(
         df_cmm_histo (pd.DataFrame): DataFrame contenant les données historiques de CMM.
         df_produit (pd.DataFrame): DataFrame contenant les informations sur les produits.
         date_report (str): La date du rapport sous forme de chaîne de caractères.
+        auto_computed_cmm (bool, optional): Indique si la CMM doit être calculée automatiquement. Defaults to True.
+
     Returns:
         Workbook: Le classeur Excel mis à jour avec les informations de CMM.
     """
@@ -446,12 +453,15 @@ def update_cmm_informations_on_sheet(
         cell.font = CS_FONT
         for col, element in dico_cols.items():
             if col == date_format.strftime("%Y-%m-%d"):
-                column_element = element if not isinstance(element, list) else element[1]
+                column_element = element[1] if isinstance(element, list) else element
                 cell = ws_annexe_1.cell(row=start, column=column_element, value=f"=$CV{start}")
                 apply_format_on_dmm_cell(cell)
+
                 # Il faut également faire des mise à jour de la cellule droite
-                cell = ws_annexe_1.cell(row=start, column=column_element + 1, value="X")
+                value = "X" if auto_computed_cmm else None
+                cell = ws_annexe_1.cell(row=start, column=column_element + 1, value=value)
                 apply_format_on_dmm_cell(cell, True)
+
             elif not isinstance(element, int):
                 cell = ws_annexe_1.cell(row=start, column=element[1], value=row[element[2]])
                 apply_format_on_dmm_cell(cell)

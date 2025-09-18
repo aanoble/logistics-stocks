@@ -45,7 +45,7 @@ def get_data_from_sheet(
         df_etat_stock_npsp = df_etat_stock_npsp.loc[df_etat_stock_npsp["Nouveau code"].notna()]
         df_etat_stock_npsp = process_etat_stock_npsp(df_etat_stock_npsp, date_report, programme)
 
-        return df_etat_stock_npsp
+        return df_etat_stock_npsp.dropna(how="all")
 
     elif sheet_name == "Stock detaille":
         sheet_stock_detaille = check_if_sheet_name_in_file("Stock detaille", sheetnames)
@@ -53,7 +53,9 @@ def get_data_from_sheet(
             f"La feuille `Stock detaille` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
-        df_stock_detaille = pd.read_excel(fp_suivi_stock, sheet_name=sheet_stock_detaille)
+        df_stock_detaille = pd.read_excel(fp_suivi_stock, sheet_name=sheet_stock_detaille).dropna(
+            how="all"
+        )
 
         max_date_year = pd.Timestamp.max.year
 
@@ -86,7 +88,9 @@ def get_data_from_sheet(
             f"La feuille `Distribution X3` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
-        df_distribution = pd.read_excel(fp_suivi_stock, sheet_name=sheet_distribution_x3)
+        df_distribution = pd.read_excel(fp_suivi_stock, sheet_name=sheet_distribution_x3).dropna(
+            how="all"
+        )
 
         return df_distribution
 
@@ -96,7 +100,7 @@ def get_data_from_sheet(
             f"La feuille `Receptions` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
-        df_receptions = pd.read_excel(fp_suivi_stock, sheet_name=sheet_reception)
+        df_receptions = pd.read_excel(fp_suivi_stock, sheet_name=sheet_reception).dropna(how="all")
         df_receptions["Date_entree_machine"] = pd.to_datetime(
             df_receptions["Date d'entrée en machine"], format="%d/%m/%Y", errors="coerce"
         )
@@ -108,12 +112,20 @@ def get_data_from_sheet(
         date_report_dt = datetime.strptime(date_report, "%Y-%m-%d")
         for row in src_wb[sheet_reception].iter_rows(min_row=2, min_col=10, max_col=11):
             for cell in row:
-                if has_formula(cell) and isinstance(cell.value, str) and "YEAR" in cell.value and "MONTH" in cell.value:
+                if (
+                    has_formula(cell)
+                    and isinstance(cell.value, str)
+                    and "YEAR" in cell.value
+                    and "MONTH" in cell.value
+                ):
                     if cell.row is not None:
                         value = df_receptions["Date_entree_machine"].iloc[cell.row - 2]
                         value = (
                             "ok"
-                            if value is not None and hasattr(value, "year") and value.year == date_report_dt.year and value.month == date_report_dt.month
+                            if value is not None
+                            and hasattr(value, "year")
+                            and value.year == date_report_dt.year
+                            and value.month == date_report_dt.month
                             else "skip"
                         )
                     else:
@@ -132,7 +144,7 @@ def get_data_from_sheet(
 
         df_ppi = pd.read_excel(fp_suivi_stock, sheet_name=sheet_ppi, skiprows=2)
 
-        return df_ppi
+        return df_ppi.dropna(how="all")
 
     elif sheet_name == "Prelèvement CQ":
         sheet_prelev = check_if_sheet_name_in_file("Prelèvement CQ", sheetnames)
@@ -142,7 +154,7 @@ def get_data_from_sheet(
 
         df_prelevement = pd.read_excel(fp_suivi_stock, sheet_name=sheet_prelev, skiprows=2)
 
-        return df_prelevement
+        return df_prelevement.dropna(how="all")
 
     elif sheet_name == "Plan d'appro":
         import locale
@@ -169,11 +181,13 @@ def get_data_from_sheet(
                     data.append(cell.value)
             data_list.append(data)
 
-        df_plan_approv = pd.DataFrame(data_list[1:], columns=data_list[0])
+        df_plan_approv = pd.DataFrame(data_list[1:], columns=data_list[0]).dropna(how="all")
 
         # df_plan_approv = pd.read_excel(fp_suivi_stock, sheet_name=sheet_approv, engine="openpyxl")
         df_plan_approv.columns = df_plan_approv.columns.str.strip()
-        df_plan_approv["Date updated"] = df_plan_approv["DATE"].dt.strftime("%B-%Y")
+        df_plan_approv["Date updated"] = pd.to_datetime(
+            df_plan_approv["DATE"], format="%Y-%m-%d", errors="coerce"
+        ).dt.strftime("%B-%Y")
 
         return df_plan_approv
 
@@ -183,10 +197,13 @@ def get_data_from_sheet(
             f"La feuille `Statut Produits` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
-        df_statut_prod = pd.read_excel(fp_suivi_stock, sheet_name=sheet_statut_prod, skiprows=1)
+        df_statut_prod = pd.read_excel(
+            fp_suivi_stock, sheet_name=sheet_statut_prod, skiprows=1
+        ).dropna(how="all")
         df_statut_prod["programme"] = programme
 
         return df_statut_prod
+
     elif sheet_name == "Annexe 1 - Consolidation":
         sheet_annexe_1 = check_if_sheet_name_in_file("Annexe 1 - Consolidation", sheetnames)
 
@@ -233,6 +250,7 @@ def get_data_from_sheet(
 
             df_etat_stock.fillna(np.nan, inplace=True)
 
-        return df_etat_stock
+        return df_etat_stock.dropna(how="all")
+
     else:
         raise ValueError(f"Le nom de la feuille `{sheet_name}` n'est pas reconnu.")
