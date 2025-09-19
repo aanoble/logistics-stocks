@@ -68,8 +68,33 @@ import requests
     default="Mapping QAT_SAGEX3.xlsx",
     help="Ce fichier doit être chargé dans le dossier `Fichier Suivi de Stock/data/Mapping produits QAT SAGE X3`",
 )
+@parameter(
+    "auto_computed_dmm",
+    name="DMM calculé automatiquement",
+    type=bool,
+    required=False,
+    default=False,
+    help="Si coché, le choix des distributions des mois sont sélectionnées automatiquement. "
+    "Si décoché, les valeurs du mois précédent sont utilisées.",
+)
+@parameter(
+    "auto_computed_cmm",
+    name="CMM calculé automatiquement",
+    type=bool,
+    required=False,
+    default=True,
+    help="Si coché, le choix de consommations des mois sont sélectionnées automatiquement. "
+    "Si décoché, les valeurs du mois précédent sont utilisées.",
+)
 def stock_file_tracking_integration(
-    month_report, year_report, programme, fp_etat_mensuel, fp_plan_approv, fp_map_prod
+    month_report,
+    year_report,
+    programme,
+    fp_etat_mensuel,
+    fp_plan_approv,
+    fp_map_prod,
+    auto_computed_dmm,
+    auto_computed_cmm,
 ):
     """Write your pipeline orchestration here.
 
@@ -82,12 +107,21 @@ def stock_file_tracking_integration(
         fp_etat_mensuel,
         fp_plan_approv,
         fp_map_prod,
+        auto_computed_dmm,
+        auto_computed_cmm,
     )
 
 
 @stock_file_tracking_integration.task
 def run_notebook(
-    month_report, year_report, programme, fp_etat_mensuel, fp_plan_approv, fp_map_prod
+    month_report,
+    year_report,
+    programme,
+    fp_etat_mensuel,
+    fp_plan_approv,
+    fp_map_prod,
+    auto_computed_dmm,
+    auto_computed_cmm,
 ):
     """Put some data processing code here."""
     current_run.log_info("Run jupyter notebook Main Program Fichier Suivi des Stocks Integration")
@@ -112,6 +146,8 @@ def run_notebook(
             "fp_etat_mensuel": fp_etat_mensuel,
             "fp_plan_approv": fp_plan_approv,
             "fp_map_prod": fp_map_prod,
+            "auto_computed_dmm": auto_computed_dmm,
+            "auto_computed_cmm": auto_computed_cmm,
         },
     )
     refresh_pbi_report()

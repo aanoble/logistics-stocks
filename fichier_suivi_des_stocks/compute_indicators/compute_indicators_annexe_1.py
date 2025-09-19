@@ -246,7 +246,7 @@ def get_dmm_current_month(
     mask = df_dmm_current["nbre_mois_consideres"].notna() & (
         df_dmm_current["nbre_mois_consideres"].astype(int) != 6
     )
-    df_dmm_current.loc[mask, "nbre_mois_consideres"] += 1
+    df_dmm_current.loc[mask, "nbre_mois_consideres"] += 1 if auto_computed_dmm else 0
 
     df_dmm_current["distributions_mois_consideres"] = df_dmm_current.apply(
         lambda row: compute_distributions(row, auto_computed_dmm), axis=1
@@ -449,7 +449,8 @@ def get_cmm_current_month(
     mask = df_cmm_current["nbre_mois_consideres"].notna() & (
         df_cmm_current["nbre_mois_consideres"].astype(int) != 6
     )
-    df_cmm_current.loc[mask, "nbre_mois_consideres"] += 1
+    
+    df_cmm_current.loc[mask, "nbre_mois_consideres"] += 1 if auto_computed_cmm else 0
 
     df_cmm_current["conso_mois_consideres"] = df_cmm_current.apply(
         lambda row: compute_consommations(row, auto_computed_cmm), axis=1
