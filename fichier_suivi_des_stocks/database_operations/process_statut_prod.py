@@ -23,7 +23,7 @@ def process_statut_prod(df: pd.DataFrame, schema_name: str, stock_sync_manager: 
         "Type": "type_produit",
         "Unité niv Central": "unit_niveau_central",
         "Unité niv Périphérique": "unit_niveau_peripherique",
-        "Facteur de conversion (De la centrale à la périphérie)": "facteur_de_conversion",
+        "Facteur de conversion \n(De la centrale à la périphérie)": "facteur_de_conversion",
         "Statut Produit": "statut_produit",
     }
     df = df.rename(columns=col_rename)

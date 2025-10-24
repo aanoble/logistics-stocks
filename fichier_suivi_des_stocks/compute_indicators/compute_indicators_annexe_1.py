@@ -123,7 +123,7 @@ def get_etat_stock_current_month(
 
     display(df_etat_stock.head(3))
 
-    return df_etat_stock
+    return df_etat_stock.round(0)
 
 
 def get_dmm_current_month(
@@ -297,7 +297,7 @@ def get_dmm_current_month(
             ["id_dim_produit_stock_track_fk", "date_report_prev"]
         )
 
-    return df_dmm_current.round(2), df_dmm_histo.round(2)
+    return df_dmm_current.round(0), df_dmm_histo.round(0)
 
 
 def get_cmm_current_month(
@@ -501,4 +501,4 @@ def get_cmm_current_month(
             ["id_dim_produit_stock_track_fk", "date_report_prev"]
         )
 
-    return df_cmm_current.round(2), df_cmm_histo.round(2)
+    return df_cmm_current.round(0), df_cmm_histo.round(0)

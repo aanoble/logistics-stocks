@@ -355,10 +355,11 @@ def update_cmm_informations_on_sheet(
     df_cmm_histo: pd.DataFrame,
     df_produit: pd.DataFrame,
     date_report: str,
+    auto_computed_dmm: bool = True,
     auto_computed_cmm: bool = True,
 ):
     """Met à jour les informations de CMM (Consommation Moyenne Mensuelle) sur la feuille annexe 1 d'un classeur Excel.
-    
+
     Args:
         wb_temp (Workbook): Le classeur Excel temporaire à mettre à jour.
         df_dmm_global (pd.DataFrame): DataFrame contenant les données globales de DMM (Demande Moyenne Mensuelle).
@@ -367,6 +368,7 @@ def update_cmm_informations_on_sheet(
         df_cmm_histo (pd.DataFrame): DataFrame contenant les données historiques de CMM.
         df_produit (pd.DataFrame): DataFrame contenant les informations sur les produits.
         date_report (str): La date du rapport sous forme de chaîne de caractères.
+        auto_computed_dmm (bool, optional): Indique si la DMM doit être calculée automatiquement. Defaults to True.
         auto_computed_cmm (bool, optional): Indique si la CMM doit être calculée automatiquement. Defaults to True.
 
     Returns:
@@ -378,6 +380,7 @@ def update_cmm_informations_on_sheet(
         df_dmm_histo,
         df_produit,
         date_report,
+        auto_computed_dmm,
     )
 
     ws_annexe_1["CW2"].value = "Détermination de la CMM au mois de " + month_year_str
@@ -506,16 +509,26 @@ def update_cmm_informations_on_sheet(
 
 
 def update_sheet_annexe_1(
-    wb_temp: Workbook, programme: str, schema_name: str, engine: Engine, date_report: str
+    wb_temp: Workbook,
+    programme: str,
+    schema_name: str,
+    engine: Engine,
+    date_report: str,
+    auto_computed_dmm: bool = True,
+    auto_computed_cmm: bool = True,
 ):
     """
     Met à jour la feuille annexe 1 avec les informations CMM et DMM.
+
     Args:
         wb_temp (Workbook): Le classeur Excel temporaire à mettre à jour.
         programme (str): Le nom du programme pour lequel les données doivent être récupérées.
         schema_name (str): Le nom du schéma de la base de données.
         engine (Engine): L'objet moteur de la base de données pour exécuter les requêtes SQL.
         date_report (str): La date du rapport sous forme de chaîne de caractères.
+        auto_computed_dmm (bool, optional): Indique si la DMM doit être calculée automatiquement. Defaults to True.
+        auto_computed_cmm (bool, optional): Indique si la CMM doit être
+
     Returns:
         Workbook: Le classeur Excel mis à jour avec les informations CMM et DMM.
     """
@@ -565,4 +578,6 @@ def update_sheet_annexe_1(
         df_cmm_histo,
         df_produit,
         date_report,
+        auto_computed_dmm,
+        auto_computed_cmm,
     )

@@ -102,7 +102,7 @@ def update_stocks(df_prevision_other_month, df_plan_approv):
             )
 
             df_prevision_other_month.iloc[i] = row
-    return df_prevision_other_month
+    return df_prevision_other_month.round(0)
 
 
 def get_prevision_current_month(
@@ -204,4 +204,4 @@ def get_prevision_current_month(
 
     display(df_prevision_other_month.head(3))
 
-    return df_prevision_other_month.round(2)
+    return df_prevision_other_month.round(0)

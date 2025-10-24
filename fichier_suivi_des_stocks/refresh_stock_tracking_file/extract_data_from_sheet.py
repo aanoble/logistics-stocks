@@ -159,7 +159,7 @@ def get_dmm_dataframes(
 
     df_stock_track_dmm_histo["date_report"] = pd.to_datetime(date_report, format="%Y-%m-%d")
 
-    return df_stock_track_dmm, df_stock_track_dmm_histo
+    return df_stock_track_dmm.round(0), df_stock_track_dmm_histo.round(0)
 
 
 def get_cmm_dataframes(
@@ -190,7 +190,7 @@ def get_cmm_dataframes(
             min_row=4,
             max_row=4,
             min_col=column_index_from_string("BL"),
-            max_col=column_index_from_string("CJ"),
+            max_col=column_index_from_string("CU"),
         )
     )[0]
 
@@ -228,7 +228,7 @@ def get_cmm_dataframes(
         src_wb[sheet_annexe_1].iter_rows(
             min_row=4,
             min_col=column_index_from_string("BL"),
-            max_col=column_index_from_string("CJ"),
+            max_col=column_index_from_string("CU"),
         ),
         start=1,
     ):
@@ -347,7 +347,7 @@ def get_cmm_dataframes(
     df_stock_track_cmm_histo = df_stock_track_cmm_histo.rename(columns={"value": "cmm"})
     df_stock_track_cmm_histo["date_report"] = pd.to_datetime(date_report, format="%Y-%m-%d")
 
-    return df_stock_track_cmm, df_stock_track_cmm_histo
+    return df_stock_track_cmm.round(0), df_stock_track_cmm_histo.round(0)
 
 
 def get_data_annexe_2(
@@ -489,7 +489,7 @@ def get_data_annexe_2(
             pd.DataFrame(data_list, columns=COLUMNS_NAME_ETAT_STOCK),
         ],
         axis=1,
-    )
+    ).round(0)
 
 
 def get_data_etat_stock(
@@ -532,4 +532,4 @@ def get_data_etat_stock(
     df_etat_stock = df_etat_stock.rename(columns=DICO_COLUMNS)
     df_etat_stock["date_report"] = pd.to_datetime(date_report, format="%Y-%m-%d")
 
-    return df_etat_stock
+    return df_etat_stock.round(0)
