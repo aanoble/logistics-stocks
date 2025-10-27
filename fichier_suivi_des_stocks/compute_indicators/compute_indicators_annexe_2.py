@@ -163,7 +163,7 @@ def _get_etat_stock_first_part(
 
     # display(df_etat_stock.head(3))
 
-    return df_etat_stock
+    return df_etat_stock.round(0)
 
 
 def _get_etat_stock_second_part(
@@ -343,7 +343,7 @@ def _get_etat_stock_second_part(
 
     df_etat_stock.drop(columns="code_and_date_concate", inplace=True)
     # display(df_etat_stock.head(3))
-    return df_etat_stock
+    return df_etat_stock.round(0)
 
 
 def _get_etat_stock_end_part(
@@ -498,7 +498,7 @@ def _get_etat_stock_end_part(
 
     display(df_etat_stock.head(3))
 
-    return df_etat_stock
+    return df_etat_stock.round(0)
 
 
 def compute_indicators_annexe_2(
@@ -525,4 +525,4 @@ def compute_indicators_annexe_2(
 
     df_etat_stock = _get_etat_stock_end_part(df_etat_stock)
 
-    return df_etat_stock.round(2)
+    return df_etat_stock.round(0)
