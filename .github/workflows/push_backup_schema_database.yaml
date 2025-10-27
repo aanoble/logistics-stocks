@@ -1,0 +1,36 @@
+name: Push backup_schema_database
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/push_backup_schema_database.yaml"
+      - "pipelines/backup_schema_database/**"
+      - "!pipelines/backup_schema_database/docs/**"
+      - "!pipelines/backup_schema_database/README.md"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+      
+      - name: Configure OpenHEXA CLI
+        uses: blsq/openhexa-cli-action@v1
+        with:
+          workspace: "workspace-civ-msp-12508c"
+          token: ${{ secrets.OH_TOKEN }}
+
+      - name: Push pipeline to OpenHEXA
+        run: |
+          openhexa pipelines push pipelines/backup_schema_database \
+            --description "${{ github.event.head_commit.message }}" \
+            --link "https://github.com/aanoble/logistics-stocks/commit/${{ github.sha }}" \
+            --yes
