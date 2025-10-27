@@ -30,7 +30,7 @@ jobs:
 
       - name: Push pipeline to OpenHEXA
         run: |
-          openhexa pipelines push update_stock_file_tracking_data \
+          openhexa pipelines push pipelines/update_stock_file_tracking_data \
             --code "update-stock-file-tracking-data" \
             --description "${{ github.event.head_commit.message }}" \
             --link "https://github.com/aanoble/logistics-stocks/commit/${{ github.sha }}" \

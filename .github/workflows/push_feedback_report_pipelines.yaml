@@ -30,7 +30,7 @@ jobs:
 
       - name: Push pipeline to OpenHEXA
         run: |
-          openhexa pipelines push feedback_report_pipelines \
+          openhexa pipelines push pipelines/feedback_report_pipelines \
             --code "feedback-report-pipelines" \
             --description "${{ github.event.head_commit.message }}" \
             --link "https://github.com/aanoble/logistics-stocks/commit/${{ github.sha }}" \
