@@ -2,7 +2,7 @@ from datetime import datetime
 
 import papermill as pm
 import requests
-from openhexa.sdk import current_run, parameter, pipeline, workspace
+from openhexa.sdk import File, current_run, parameter, pipeline, workspace
 
 
 @pipeline("feedback-report-pipelines")
@@ -30,14 +30,14 @@ from openhexa.sdk import current_run, parameter, pipeline, workspace
 @parameter(
     "fp_site_attendus",
     name="Fichier de la liste des sites attendus",
-    type=str,
+    type=File,
     required=True,
     help="Fichier de la liste des sites Attendus chargé au préalable sur OpenHexa dans le dossier `Rapport Feedback/data/Sites attendus`.",
 )
 @parameter(
     "fp_prod_traceurs",
     name="Fichier de la liste des produits traceurs",
-    type=str,
+    type=File,
     required=True,
     help="Fichier de la liste des produits traceurs chargé au préalable sur OpenHexa dans le dossier `Rapport Feedback/data/Produits Traceurs`",
 )

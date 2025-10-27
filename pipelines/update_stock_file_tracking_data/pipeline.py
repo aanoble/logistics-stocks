@@ -2,9 +2,10 @@
 
 from datetime import datetime
 from pathlib import Path
-from openhexa.sdk import workspace, current_run, pipeline, parameter
+
 import papermill as pm
 import requests
+from openhexa.sdk import File, current_run, parameter, pipeline, workspace
 
 
 @pipeline(
@@ -13,7 +14,7 @@ import requests
 @parameter(
     "fp_suivi_stock",
     name="Fichier Suivi de Stock Mis à Jour à la suite de la réunion mensuelle",
-    type=str,
+    type=File,
     required=True,
     help="Ce fichier doit être chargé dans le dossier `Fichier Suivi de Stock/data/<programme>/Fichier Suivi de Stock`",
 )

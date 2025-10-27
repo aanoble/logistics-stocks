@@ -4,8 +4,8 @@ from datetime import datetime
 from pathlib import Path
 
 import papermill as pm
-from openhexa.sdk import current_run, parameter, pipeline, workspace
 import requests
+from openhexa.sdk import File, current_run, parameter, pipeline, workspace
 
 
 @pipeline("stock-file-tracking-integration")
@@ -49,7 +49,7 @@ import requests
 @parameter(
     "fp_etat_mensuel",
     name="Fichier etat du stock et de distribution",
-    type=str,
+    type=File,
     required=True,
     help="Ce fichier doit être chargé dans le dossier `Fichier Suivi de Stock/data/<programme>/Etat de Stock Mensuel`",
 )
@@ -63,10 +63,10 @@ import requests
 @parameter(
     "fp_map_prod",
     name="Fichier de mapping des produits QAT en SAGEX3",
-    type=str,
+    type=File,
     required=True,
-    default="Mapping QAT_SAGEX3.xlsx",
-    help="Ce fichier doit être chargé dans le dossier `Fichier Suivi de Stock/data/Mapping produits QAT SAGE X3`",
+    default="Mapping QAT_SAGEX3_AOUT_2025.xlsx",
+    help="Ce fichier doit être chargé dans le dossier `Fichier Suivi de Stock/data/`",
 )
 @parameter(
     "auto_computed_dmm",
