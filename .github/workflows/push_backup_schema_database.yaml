@@ -31,6 +31,7 @@ jobs:
       - name: Push pipeline to OpenHEXA
         run: |
           openhexa pipelines push pipelines/backup_schema_database \
+            --code "backup_schema_database" \
             --description "${{ github.event.head_commit.message }}" \
             --link "https://github.com/aanoble/logistics-stocks/commit/${{ github.sha }}" \
             --yes
