@@ -6,9 +6,9 @@ on:
       - main
     paths:
       - ".github/workflows/push_stock_file_tracking_integration.yaml"
-      - "stock_file_tracking_integration/**"
-      - "!stock_file_tracking_integration/docs/**"
-      - "!stock_file_tracking_integration/README.md"
+      - "pipelines/stock_file_tracking_integration/**"
+      - "!pipelines/stock_file_tracking_integration/docs/**"
+      - "!pipelines/stock_file_tracking_integration/README.md"
 
 jobs:
   deploy:

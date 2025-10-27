@@ -6,9 +6,9 @@ on:
       - main
     paths:
       - ".github/workflows/push_feedback_report_pipelines.yaml"
-      - "feedback_report_pipelines/**"
-      - "!feedback_report_pipelines/docs/**"
-      - "!feedback_report_pipelines/README.md"
+      - "pipelines/feedback_report_pipelines/**"
+      - "!pipelines/feedback_report_pipelines/docs/**"
+      - "!pipelines/feedback_report_pipelines/README.md"
 
 jobs:
   deploy:
