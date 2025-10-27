@@ -65,7 +65,7 @@ from openhexa.sdk import File, current_run, parameter, pipeline, workspace
     name="Fichier de mapping des produits QAT en SAGEX3",
     type=File,
     required=True,
-    default="Mapping QAT_SAGEX3_AOUT_2025.xlsx",
+    default="Fichier Suivi de Stock/data/Mapping QAT_SAGEX3_AOUT_2025.xlsx",
     help="Ce fichier doit être chargé dans le dossier `Fichier Suivi de Stock/data/`",
 )
 @parameter(
