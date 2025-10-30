@@ -105,9 +105,9 @@ def stock_file_tracking_integration(
         month_report,
         year_report,
         programme,
-        fp_etat_mensuel,
+        fp_etat_mensuel.path,
         fp_plan_approv,
-        fp_map_prod,
+        fp_map_prod.path,
         auto_computed_dmm,
         auto_computed_cmm,
     )

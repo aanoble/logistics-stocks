@@ -64,7 +64,7 @@ def update_stock_file_tracking_data(fp_suivi_stock, month_report, year_report, p
         f"Exécution du Jupyter Notebook pour la mise à jour des données du rapport PBI du programme {programme}"
     )
     run_notebook(
-        fp_suivi_stock,
+        fp_suivi_stock.path,
         month_report,
         year_report,
         programme,

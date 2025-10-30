@@ -52,8 +52,8 @@ def feedback_report_pipelines(
     """
     run_notebook(
         month_report,
-        fp_site_attendus,
-        fp_prod_traceurs,
+        fp_site_attendus.path,
+        fp_prod_traceurs.path,
     )
 
 
