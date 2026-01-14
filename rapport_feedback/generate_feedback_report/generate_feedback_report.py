@@ -911,12 +911,13 @@ def export_stock_region_to_sheet(
     }
     date_report = pd.to_datetime(date_report, format="%Y/%m/%d") + relativedelta(months=1)
     date_report = date_report.replace(day=11)
-    ws_acceuil["E12"] = (
-        "Période: "
-        + dico_mois_fr[calendar.month_name[date_report.month - 1]]
-        + " "
-        + str(date_report.year)
+    index_month = (
+        calendar.month_name[date_report.month - 1]
+        if date_report.month != 1
+        else calendar.month_name[-1]
     )
+    year = date_report.year if date_report.month != 1 else date_report.year - 1
+    ws_acceuil["E12"] = "Période: " + dico_mois_fr[index_month] + " " + str(year)
     ws_acceuil["E15"] = "Extraction du 11/" + date_report.strftime("%m/%Y")
 
     if dest_file:
