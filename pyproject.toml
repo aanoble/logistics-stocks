@@ -1,0 +1,13 @@
+[project]
+name = "wp3-logistics-and-stocks"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.4.2",
+    "openhexa-sdk>=2.19.0",
+    "pandas>=3.0.1",
+    "papermill>=2.6.0",
+    "ruff>=0.15.2",
+]

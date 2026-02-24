@@ -208,7 +208,7 @@ def update_dmm_informations_on_sheet(
 
     # Modification des plages historique des valeurs des DMM et CMM
     dates_list = pd.date_range(
-        start=f"{date_format.year - 1}-07-01", end=f"{date_format.year}-12-01", freq="MS"
+        start=f"{date_format.year - 1}-02-01", end=f"{date_format.year}-07-01", freq="MS"
     ).tolist()
     for row in ws_annexe_1.iter_rows(min_row=4, max_row=4, min_col=22, max_col=57):
         for cell in row:

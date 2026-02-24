@@ -34,7 +34,7 @@ from openhexa.sdk import File, current_run, parameter, pipeline, workspace
     "year_report",
     name="Année de conception du rapport",
     type=int,
-    default=2025,
+    default=2026,
     required=True,
     help="Année de conception du Fichier Suivi des Stocks",
 )
@@ -57,7 +57,7 @@ from openhexa.sdk import File, current_run, parameter, pipeline, workspace
     "fp_plan_approv",
     name="Fichier du plan d'appro",
     type=str,
-    required=True,
+    required=False,
     help="Fichier ou dossier doit être chargé dans le dossier `Fichier Suivi de Stock/data/<programme>/Plan d'Approvisionnement`",
 )
 @parameter(
@@ -67,7 +67,6 @@ from openhexa.sdk import File, current_run, parameter, pipeline, workspace
     required=True,
     default="Fichier Suivi de Stock/data/Mapping produits QAT SAGE X3/Mapping QAT_SAGEX3_AOUT_2025.xlsx",
     help="Ce fichier doit être chargé dans le dossier `Fichier Suivi de Stock/data/Mapping produits QAT SAGE X3/`",
-    
 )
 @parameter(
     "auto_computed_dmm",
@@ -106,7 +105,7 @@ def stock_file_tracking_integration(
         year_report,
         programme,
         fp_etat_mensuel.path,
-        fp_plan_approv,
+        fp_plan_approv or "",
         fp_map_prod.path,
         auto_computed_dmm,
         auto_computed_cmm,

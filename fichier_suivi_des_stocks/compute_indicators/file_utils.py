@@ -1,10 +1,13 @@
 import os
 import re
 from datetime import datetime
-from pathlib import PosixPath
+from pathlib import Path, PosixPath
 
 import numpy as np
 import pandas as pd
+from openhexa.sdk import workspace
+
+from .fetch_pa_from_qat import extract_pa
 
 
 def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programme: str):
@@ -17,52 +20,67 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
     Returns:
         pd.DataFrame: A DataFrame containing the processed and merged data.
     """
-    # Liste pour accumuler les données
-    data = []
+    if (
+        fp_plan_approv is None
+        or fp_plan_approv
+        == Path(workspace.files_path)
+        / f"Fichier Suivi de Stock/data/{programme}/Plan d'Approvisionnement"
+    ):
+        conn = workspace.get_connection("qat")
+        credentials = {"username": conn.username, "password": conn.password}  # type: ignore
+        df_plan_approv = extract_pa(programme_id=programme, credentials=credentials)
+        df_plan_approv["date de réception"] = df_plan_approv["date de réception"].apply(
+            lambda d: datetime.strptime(d, "%Y-%m-%d")
+        )
 
-    # Fonction pour traiter un fichier unique
-    def _process_pa_file(fichier):
-        nonlocal data
-        version = None
-        with open(file=fichier) as file:
-            for line in file.readlines():
-                if version is None and "version" in line.lower():
-                    try:
-                        version = line.split(":")[-1].replace('"', "").strip()
-                        list_element = _process_pa_version(version)
-                    except IndexError:
-                        version = ""
-
-                if len(line.split(",", 16)) == 17:
-                    data.append(
-                        [col.replace('"', "").strip() for col in line.split(",", 16)] + list_element
-                    )
-
-    if os.path.isdir(fp_plan_approv):
-        for root, _, files in os.walk(fp_plan_approv):
-            for file in files:
-                if file.endswith(".csv"):
-                    _process_pa_file(os.path.join(root, file))
     else:
-        _process_pa_file(fp_plan_approv)
+        # Liste pour accumuler les données
+        data = []
 
-    df_plan_approv = pd.DataFrame(
-        data[1:], columns=data[0][:-2] + ["version_pa", "date_extraction_pa"]
-    )
+        # Fonction pour traiter un fichier unique
+        def _process_pa_file(fichier):
+            nonlocal data
+            version = None
+            with open(file=fichier) as file:
+                for line in file.readlines():
+                    if version is None and "version" in line.lower():
+                        try:
+                            version = line.split(":")[-1].replace('"', "").strip()
+                            list_element = _process_pa_version(version)
+                        except IndexError:
+                            version = ""
 
-    # Bad index
-    bad_index = df_plan_approv.loc[
-        df_plan_approv["ID de produit QAT / Identifiant de produit (prévision)"]
-        == "ID de produit QAT / Identifiant de produit (prévision)"
-    ].index
+                    if len(line.split(",", 16)) == 17:
+                        data.append(
+                            [col.replace('"', "").strip() for col in line.split(",", 16)]
+                            + list_element
+                        )
 
-    df_plan_approv.drop(index=bad_index, inplace=True)
+        if os.path.isdir(fp_plan_approv):
+            for root, _, files in os.walk(fp_plan_approv):
+                for file in files:
+                    if file.endswith(".csv"):
+                        _process_pa_file(os.path.join(root, file))
+        else:
+            _process_pa_file(fp_plan_approv)
 
-    for col in ["ID de produit QAT / Identifiant de produit (prévision)", "ID de l`envoi QAT"]:
-        try:
-            df_plan_approv[col] = df_plan_approv[col].astype("Int64")
-        except Exception:
-            pass
+        df_plan_approv = pd.DataFrame(
+            data[1:], columns=data[0][:-2] + ["version_pa", "date_extraction_pa"]
+        )
+
+        # Bad index
+        bad_index = df_plan_approv.loc[
+            df_plan_approv["ID de produit QAT / Identifiant de produit (prévision)"]
+            == "ID de produit QAT / Identifiant de produit (prévision)"
+        ].index
+
+        df_plan_approv.drop(index=bad_index, inplace=True)
+
+        for col in ["ID de produit QAT / Identifiant de produit (prévision)", "ID de l`envoi QAT"]:
+            try:
+                df_plan_approv[col] = df_plan_approv[col].astype("Int64")
+            except Exception:
+                pass
 
     for col in [
         "Coût unitaire de produit (USD)",
@@ -137,24 +155,6 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
         .fillna(0)
     )
 
-    def _get_code_and_date_concate(row):
-        try:
-            if not pd.isna(row["Standard product code"]):
-                return (
-                    str(int(row["Standard product code"]))
-                    + "_"
-                    + str(row["DATE"]).replace(" 00:00:00", "")
-                )
-            elif pd.isna(row["Standard product code"]) and not pd.isna(row["DATE"]):
-                return "_" + str(row["DATE"]).replace(" 00:00:00", "")
-            else:
-                return np.nan
-        except Exception:
-            try:
-                return "_" + str(row["DATE"]).replace(" 00:00:00", "")
-            except Exception:
-                return np.nan
-
     df_plan_approv["code_and_date_concate"] = df_plan_approv.apply(
         lambda row: _get_code_and_date_concate(row), axis=1
     )
@@ -223,6 +223,25 @@ def process_etat_stock_npsp(
     df_etat_stock_npsp["programme"] = programme
 
     return df_etat_stock_npsp
+
+
+def _get_code_and_date_concate(row):
+    try:
+        if not pd.isna(row["Standard product code"]):
+            return (
+                str(int(row["Standard product code"]))
+                + "_"
+                + str(row["DATE"]).replace(" 00:00:00", "")
+            )
+        elif pd.isna(row["Standard product code"]) and not pd.isna(row["DATE"]):
+            return "_" + str(row["DATE"]).replace(" 00:00:00", "")
+        else:
+            return np.nan
+    except Exception:
+        try:
+            return "_" + str(row["DATE"]).replace(" 00:00:00", "")
+        except Exception:
+            return np.nan
 
 
 DATE_EXTRACT_PATTERN = re.compile(r"\((\w{3,9} \d{1,2} \d{4})\)")
