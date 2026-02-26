@@ -14,7 +14,7 @@ from openhexa.sdk import File, current_run, parameter, pipeline, workspace
 @parameter(
     "fp_suivi_stock",
     name="Fichier Suivi de Stock Mis à Jour à la suite de la réunion mensuelle",
-    type=File,
+    type=File, # type: ignore
     required=True,
     help="Ce fichier doit être chargé dans le dossier `Fichier Suivi de Stock/data/<programme>/Fichier Suivi de Stock`",
 )
@@ -43,7 +43,7 @@ from openhexa.sdk import File, current_run, parameter, pipeline, workspace
     "year_report",
     name="Année de conception du rapport",
     type=int,
-    default=2025,
+    default=2026,
     required=True,
     help="Année de conception du Fichier Suivi des Stocks",
 )
@@ -116,8 +116,8 @@ def refresh_pbi_report(
 
         # Initialisation connexion
         conn = workspace.custom_connection(connection_name)
-        credentials = eval(conn.credentials)
-        group_id = conn.group_id
+        credentials = eval(conn.credentials) # type: ignore
+        group_id = conn.group_id # type: ignore
 
         # Récupération token
         token_url = (

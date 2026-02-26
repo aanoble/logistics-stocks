@@ -49,7 +49,7 @@ from openhexa.sdk import File, current_run, parameter, pipeline, workspace
 @parameter(
     "fp_etat_mensuel",
     name="Fichier etat du stock et de distribution",
-    type=File,
+    type=File,  # type: ignore
     required=True,
     help="Ce fichier doit être chargé dans le dossier `Fichier Suivi de Stock/data/<programme>/Etat de Stock Mensuel`",
 )
@@ -63,7 +63,7 @@ from openhexa.sdk import File, current_run, parameter, pipeline, workspace
 @parameter(
     "fp_map_prod",
     name="Fichier de mapping des produits QAT en SAGEX3",
-    type=File,
+    type=File,  # type: ignore
     required=True,
     default="Fichier Suivi de Stock/data/Mapping produits QAT SAGE X3/Mapping QAT_SAGEX3_AOUT_2025.xlsx",
     help="Ce fichier doit être chargé dans le dossier `Fichier Suivi de Stock/data/Mapping produits QAT SAGE X3/`",
@@ -170,8 +170,8 @@ def refresh_pbi_report(
 
         # Initialisation connexion
         conn = workspace.custom_connection(connection_name)
-        credentials = eval(conn.credentials)
-        group_id = conn.group_id
+        credentials = eval(conn.credentials)  # type: ignore
+        group_id = conn.group_id  # type: ignore
 
         # Récupération token
         token_url = (

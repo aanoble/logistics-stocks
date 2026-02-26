@@ -7,13 +7,13 @@ SELECT
         ELSE st.stock_theorique_final_attendu
     END AS stock_theorique_mois_precedent
 FROM 
-    {schema_name}.stock_track st
-INNER JOIN 
    {schema_name}.dim_produit_stock_track prod 
+LEFT JOIN
+    {schema_name}.stock_track st
     ON st.id_dim_produit_stock_track_fk = prod.id_dim_produit_stock_track_pk
+    AND st.date_report = '{date_report_prec}'
 WHERE 
     prod.programme = '{programme}'
-    AND st.date_report = '{date_report_prec}'
 ORDER BY prod.id_dim_produit_stock_track_pk
 """
 
