@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import Iterable
 
 import pandas as pd
@@ -205,13 +206,14 @@ def transform_pa_dataframe(
 def extract_pa(
     programme_id: str | int | Iterable[int],
     credentials: dict[str, str],
+    date_report: str,
 ) -> pd.DataFrame:
     headers = get_auth_headers(credentials)
     program_ids = resolve_program_ids(programme_id)
 
-    year = pd.Timestamp.now().year
+    year = datetime.strptime(date_report, "%Y-%m-%d").year
     start_date: str = f"{year}-01-01"
-    stop_date: str = f"{year}-12-31"
+    stop_date: str = f"{year + 1}-12-31"
 
     frames: list[pl.DataFrame] = []
     for program_id in program_ids:

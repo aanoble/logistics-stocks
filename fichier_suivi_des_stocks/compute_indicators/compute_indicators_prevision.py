@@ -118,9 +118,12 @@ def get_prevision_current_month(
 
     df_stock_track = pd.read_sql(
         f"""SELECT prod.*, st.*
-            FROM {schema_name}.stock_track st
-            INNER JOIN {schema_name}.dim_produit_stock_track prod ON st.id_dim_produit_stock_track_fk = prod.id_dim_produit_stock_track_pk
-            WHERE prod.programme='{programme}' AND date_report='{date_report}' 
+            FROM {schema_name}.dim_produit_stock_track prod
+            LEFT JOIN
+            {schema_name}.stock_track st
+            ON st.id_dim_produit_stock_track_fk = prod.id_dim_produit_stock_track_pk
+            AND date_report='{date_report}'
+            WHERE prod.programme='{programme}' 
             -- AND prod.designation_acronym IS NOT NULL
         """,
         engine,
@@ -140,20 +143,24 @@ def get_prevision_current_month(
     ].sort_values("code_produit")
 
     df_prevision["stock_prev_central"] = df_prevision.apply(
-        lambda row: 0
-        if row.sdu_central_annexe_2 == 0
-        else round(row.sdu_central_annexe_2 / row.dmm_central_annexe_2)
-        if row.dmm_central_annexe_2 != 0
-        else "ND",
+        lambda row: (
+            0
+            if row.sdu_central_annexe_2 == 0 or pd.isna(row.sdu_central_annexe_2)
+            else round(row.sdu_central_annexe_2 / row.dmm_central_annexe_2)
+            if row.dmm_central_annexe_2 != 0 and not pd.isna(row.dmm_central_annexe_2)
+            else "ND"
+        ),
         axis=1,
     )
 
     df_prevision["stock_prev_national"] = df_prevision.apply(
-        lambda row: 0
-        if row.sdu_national_annexe_2 == 0
-        else round(row.sdu_national_annexe_2 / row.cmm_national_annexe_2)
-        if row.cmm_national_annexe_2 != 0
-        else "ND",
+        lambda row: (
+            0
+            if row.sdu_national_annexe_2 == 0 or pd.isna(row.sdu_national_annexe_2)
+            else round(row.sdu_national_annexe_2 / row.cmm_national_annexe_2)
+            if row.cmm_national_annexe_2 != 0 and not pd.isna(row.cmm_national_annexe_2)
+            else "ND"
+        ),
         axis=1,
     )
 

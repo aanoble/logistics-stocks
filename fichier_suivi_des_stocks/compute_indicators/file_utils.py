@@ -10,13 +10,19 @@ from openhexa.sdk import workspace
 from .fetch_pa_from_qat import extract_pa
 
 
-def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programme: str):
+def process_pa_files(
+    fp_plan_approv: PosixPath,
+    fp_map_prod: PosixPath,
+    programme: str,
+    date_report: str,
+) -> pd.DataFrame:
     """
     Process and merge plan approval files with product mapping data.
     Args:
         fp_plan_approv (PosixPath): Path to the directory or file containing plan approval CSV files.
         fp_map_prod (PosixPath): Path to the Excel file containing product mapping data.
         programme (str): The sheet name in the Excel file to be used for product mapping.
+        date_report (str): The date of the report in the format "YYYY-MM-DD".
     Returns:
         pd.DataFrame: A DataFrame containing the processed and merged data.
     """
@@ -28,7 +34,9 @@ def process_pa_files(fp_plan_approv: PosixPath, fp_map_prod: PosixPath, programm
     ):
         conn = workspace.get_connection("qat")
         credentials = {"username": conn.username, "password": conn.password}  # type: ignore
-        df_plan_approv = extract_pa(programme_id=programme, credentials=credentials)
+        df_plan_approv = extract_pa(
+            programme_id=programme, credentials=credentials, date_report=date_report
+        )
         df_plan_approv["date de réception"] = df_plan_approv["date de réception"].apply(
             lambda d: datetime.strptime(d, "%Y-%m-%d")
         )

@@ -51,11 +51,11 @@ def get_etat_stock_current_month(
     """
     try:
         df_etat_stock["Distribution effectuée"] = df_etat_stock["code_produit"].apply(
-            lambda x: df_distribution.loc[df_distribution.Article == x, "Quantité livrée"].sum()
+            lambda x: df_distribution.loc[df_distribution.Article == x, "Quantité livrée"].sum()  # type: ignore
         )
     except KeyError:
         df_etat_stock["Distribution effectuée"] = df_etat_stock["code_produit"].apply(
-            lambda x: df_distribution.loc[df_distribution.Article == x, "Qté livrée"].sum()
+            lambda x: df_distribution.loc[df_distribution.Article == x, "Qté livrée"].sum()  # type: ignore
         )
 
     # A modifier ici
@@ -67,18 +67,18 @@ def get_etat_stock_current_month(
             & (df_receptions["Date_entree_machine"].dt.month == date_report_dt.month)
             & (df_receptions["Date_entree_machine"].dt.year == date_report_dt.year),
             "Quantité réceptionnée",
-        ].sum()
+        ].sum()  # type: ignore
     )
 
     code_col = [col for col in df_ppi.columns if "CODE" in str(col).upper()][0]
     df_etat_stock["Quantité de PPI"] = df_etat_stock["code_produit"].apply(
-        lambda x: df_ppi.loc[df_ppi[code_col] == x, "Quantité"].sum()
+        lambda x: df_ppi.loc[df_ppi[code_col] == x, "Quantité"].sum()  # type: ignore
     )
 
     code_col = [col for col in df_prelevement.columns if "CODE" in str(col).upper()][0]
     df_etat_stock["Quantité prélévée en Contrôle Qualité (CQ)"] = df_etat_stock[
         "code_produit"
-    ].apply(lambda x: df_prelevement.loc[df_prelevement[code_col] == x, "Quantité"].sum())
+    ].apply(lambda x: df_prelevement.loc[df_prelevement[code_col] == x, "Quantité"].sum())  # type: ignore
 
     df_etat_stock["Ajustement de stock"] = np.nan
 
@@ -86,27 +86,29 @@ def get_etat_stock_current_month(
     # col_stock_theo = [col for col in df_etat_stock.columns if 'Stock Théorique fin' in str(col)][0]
 
     df_etat_stock["Stock Théorique Final SAGE"] = df_etat_stock["code_produit"].apply(
-        lambda x: df_stock_detaille.loc[df_stock_detaille[code_col] == x, "Qté \nPhysique"].sum()
+        lambda x: df_stock_detaille.loc[df_stock_detaille[code_col] == x, "Qté \nPhysique"].sum()  # type: ignore
     )
 
     # del df_distribution, df_ppi, df_prelevement ,df_receptions, df_stock_detaille
 
     df_etat_stock["Stock Théorique Final Attendu"] = df_etat_stock.apply(
-        lambda row: np.nan
-        if pd.isna(row["Stock Théorique Final SAGE"])
-        else (
-            -row["Distribution effectuée"]
-            + row["Quantité reçue entrée en stock"]
-            - row["Quantité de PPI"]
-            - row["Quantité prélévée en Contrôle Qualité (CQ)"]
-        )
-        if pd.isna(row["stock_theorique_mois_precedent"])
-        else (
-            row["stock_theorique_mois_precedent"]
-            - row["Distribution effectuée"]
-            + row["Quantité reçue entrée en stock"]
-            - row["Quantité de PPI"]
-            - row["Quantité prélévée en Contrôle Qualité (CQ)"]
+        lambda row: (
+            np.nan
+            if pd.isna(row["Stock Théorique Final SAGE"])
+            else (
+                -row["Distribution effectuée"]
+                + row["Quantité reçue entrée en stock"]
+                - row["Quantité de PPI"]
+                - row["Quantité prélévée en Contrôle Qualité (CQ)"]
+            )
+            if pd.isna(row["stock_theorique_mois_precedent"])
+            else (
+                row["stock_theorique_mois_precedent"]
+                - row["Distribution effectuée"]
+                + row["Quantité reçue entrée en stock"]
+                - row["Quantité de PPI"]
+                - row["Quantité prélévée en Contrôle Qualité (CQ)"]
+            )
         ),
         axis=1,
     )
@@ -223,17 +225,20 @@ def get_dmm_current_month(
     def compute_distributions(row, auto_computed_dmm: bool = True):
         if pd.isna(row.nbre_mois_consideres):
             return np.nan
-        # Générer la série des mois (en début de mois) entre date_report_prev_min et date_report
-        months = pd.date_range(start=row.date_report_prev_min, end=row.date_report, freq="MS")
-        months = months[1:] if auto_computed_dmm else months[:-1]
-        # Somme des distributions validées pour les mois correspondants
-        total = df_dmm_histo.loc[
-            (df_dmm_histo.id_dim_produit_stock_track_pk == row.id_dim_produit_stock_track_pk)
-            & (df_dmm_histo.date_report_prev.isin(months)),
-            "dmm",
-        ].sum()
-        value = total + row.dmm if auto_computed_dmm else total
-        return value
+        try:
+            # Générer la série des mois (en début de mois) entre date_report_prev_min et date_report
+            months = pd.date_range(start=row.date_report_prev_min, end=row.date_report, freq="MS")
+            months = months[1:] if auto_computed_dmm else months[:-1]
+            # Somme des distributions validées pour les mois correspondants
+            total = df_dmm_histo.loc[
+                (df_dmm_histo.id_dim_produit_stock_track_pk == row.id_dim_produit_stock_track_pk)
+                & (df_dmm_histo.date_report_prev.isin(months)),
+                "dmm",
+            ].sum()  # type: ignore
+            value = total + row.dmm if auto_computed_dmm else total
+            return value
+        except Exception:
+            return np.nan
 
     # Vectorisation de la mise à jour de nbre_mois_consideres :
     # 1. Pour les lignes où nbre_mois_consideres est NaN et dmm n'est pas NaN, on assigne 1.
@@ -254,9 +259,11 @@ def get_dmm_current_month(
 
     # Calcul de la DMM calculée
     df_dmm_current["dmm_calculee"] = df_dmm_current.apply(
-        lambda row: row.distributions_mois_consideres / row.nbre_mois_consideres
-        if pd.notna(row.nbre_mois_consideres) and row.nbre_mois_consideres != 0
-        else np.nan,
+        lambda row: (
+            row.distributions_mois_consideres / row.nbre_mois_consideres
+            if pd.notna(row.nbre_mois_consideres) and row.nbre_mois_consideres != 0
+            else np.nan
+        ),
         axis=1,
     )
 
@@ -370,9 +377,11 @@ def get_cmm_current_month(
     df_cmm_current["CONSO"] = df_cmm_current["CONSO"].fillna(0)
 
     df_cmm_current["cmm"] = df_cmm_current.apply(
-        lambda row: math.ceil(row.CONSO / row.facteur_de_conversion)
-        if not pd.isna(row.facteur_de_conversion) and row.facteur_de_conversion != 0
-        else 0,
+        lambda row: (
+            math.ceil(row.CONSO / row.facteur_de_conversion)
+            if not pd.isna(row.facteur_de_conversion) and row.facteur_de_conversion != 0
+            else 0
+        ),
         axis=1,
     )
 
@@ -428,17 +437,20 @@ def get_cmm_current_month(
     def compute_consommations(row, auto_computed_cmm: bool = True):
         if pd.isna(row.nbre_mois_consideres):
             return np.nan
-        # Générer la série des mois (en début de mois) entre date_report_prev_min et date_report
-        months = pd.date_range(start=row.date_report_prev_min, end=row.date_report, freq="MS")
-        months = months[1:] if auto_computed_cmm else months[1:]
-        # Somme des distributions validées pour les mois correspondants
-        total = df_cmm_histo.loc[
-            (df_cmm_histo.id_dim_produit_stock_track_pk == row.id_dim_produit_stock_track_pk)
-            & (df_cmm_histo.date_report_prev.isin(months)),
-            "cmm",
-        ].sum()
-        value = total + row.cmm if auto_computed_cmm else total
-        return value
+        try:
+            # Générer la série des mois (en début de mois) entre date_report_prev_min et date_report
+            months = pd.date_range(start=row.date_report_prev_min, end=row.date_report, freq="MS")
+            months = months[1:] if auto_computed_cmm else months[1:]
+            # Somme des distributions validées pour les mois correspondants
+            total = df_cmm_histo.loc[
+                (df_cmm_histo.id_dim_produit_stock_track_pk == row.id_dim_produit_stock_track_pk)
+                & (df_cmm_histo.date_report_prev.isin(months)),
+                "cmm",
+            ].sum()
+            value = total + row.cmm if auto_computed_cmm else total
+            return value
+        except Exception:
+            return np.nan
 
     # Vectorisation de la mise à jour de nbre_mois_consideres :
     df_cmm_current["nbre_mois_consideres"] = np.where(
@@ -449,7 +461,7 @@ def get_cmm_current_month(
     mask = df_cmm_current["nbre_mois_consideres"].notna() & (
         df_cmm_current["nbre_mois_consideres"].astype(int) != 6
     )
-    
+
     df_cmm_current.loc[mask, "nbre_mois_consideres"] += 1 if auto_computed_cmm else 0
 
     df_cmm_current["conso_mois_consideres"] = df_cmm_current.apply(
@@ -457,9 +469,11 @@ def get_cmm_current_month(
     )
 
     df_cmm_current["cmm_calculee"] = df_cmm_current.apply(
-        lambda row: row.conso_mois_consideres / row.nbre_mois_consideres
-        if not pd.isna(row.nbre_mois_consideres) and row.nbre_mois_consideres != 0
-        else np.nan,
+        lambda row: (
+            row.conso_mois_consideres / row.nbre_mois_consideres
+            if not pd.isna(row.nbre_mois_consideres) and row.nbre_mois_consideres != 0
+            else np.nan
+        ),
         axis=1,
     )
 
