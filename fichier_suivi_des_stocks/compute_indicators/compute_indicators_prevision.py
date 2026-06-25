@@ -84,25 +84,47 @@ def update_stocks(df_prevision_other_month, df_plan_approv):
                 if not df_plan_filtered.empty
                 else 0
             )
-            row["stock_prev_central"] = (
-                "ND"
-                if stock_prev_central == "ND"
-                else round(max(0, stock_prev_central - 1) + quantite / row["dmm_central_annexe_2"])
-                if row["dmm_central_annexe_2"] != 0
-                else "ND"
+            row["stock_prev_central"] = compute_projected_stock(
+                previous_stock=stock_prev_central,
+                quantite=quantite,
+                consommation=row["dmm_central_annexe_2"],
             )
-            row["stock_prev_national"] = (
-                "ND"
-                if stock_prev_national == "ND"
-                else round(
-                    max(0, stock_prev_national - 1) + quantite / row["cmm_national_annexe_2"]
-                )
-                if row["cmm_national_annexe_2"] != 0
-                else "ND"
+            row["stock_prev_national"] = compute_projected_stock(
+                previous_stock=stock_prev_national,
+                quantite=quantite,
+                consommation=row["cmm_national_annexe_2"],
             )
 
             df_prevision_other_month.iloc[i] = row
     return df_prevision_other_month.round(0)
+
+
+def compute_projected_stock(previous_stock, quantite, consommation):
+    """
+    Calcule un stock prévisionnel en évitant les divisions invalides et les overflows.
+    Retourne "ND" si le calcul n'est pas possible.
+    """
+    if previous_stock == "ND":
+        return "ND"
+
+    try:
+        prev = float(previous_stock)
+        qty = float(quantite)
+        cons = float(consommation)
+    except (TypeError, ValueError, OverflowError):
+        return "ND"
+
+    if not np.isfinite(prev) or not np.isfinite(qty) or not np.isfinite(cons) or cons == 0:
+        return "ND"
+
+    projected = max(0.0, prev - 1.0) + (qty / cons)
+    if not np.isfinite(projected):
+        return "ND"
+
+    try:
+        return int(round(projected))
+    except (TypeError, ValueError, OverflowError):
+        return "ND"
 
 
 def get_prevision_current_month(
