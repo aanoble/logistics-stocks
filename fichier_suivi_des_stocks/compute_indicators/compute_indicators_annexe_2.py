@@ -28,17 +28,20 @@ def get_statut_stock(
     Returns:
         Stock status string: "Rupture", "Stock dormant", "Sous-Stock", "SurStock", or "Bien Stocké".
     """
-    if row[f"SDU_{level}"] == 0:
+    sdu_col = f"SDU_{level}"
+    msd_col = f"MSD_{level}"
+    dormant_col = f"DMM_{level}" if level == "CENTRAL" else f"CMM_{level}"
+
+    if row[sdu_col] == 0:
         return "Rupture"
-    if row[f"DMM_{level}"] == 0:
+    if row[dormant_col] == 0:
         return "Stock dormant"
 
-    if programme == "PNLT":
-        min_msd, max_msd = min_msd_pnlt, max_msd_pnlt
-    else:
-        min_msd, max_msd = min_msd_other, max_msd_other
+    min_msd, max_msd = (
+        (min_msd_pnlt, max_msd_pnlt) if programme == "PNLT" else (min_msd_other, max_msd_other)
+    )
 
-    msd = row[f"MSD_{level}"]
+    msd = row[msd_col]
     if msd < min_msd:
         return "Sous-Stock"
     if msd > max_msd:
@@ -54,7 +57,11 @@ def _get_etat_stock_first_part(
     programme: str,
     date_report: str,
 ) -> pd.DataFrame:
-    """Cette fonction calcule les indicateurs de la feuilles Annexe 2 - Consolidation."""
+    """Cette fonction calcule les indicateurs de la feuilles Annexe 2 - Consolidation.
+
+    Returns:
+        DataFrame with calculated stock indicators.
+    """
     df_etat_stock["SDU_CENTRAL"] = df_etat_stock["Stock Théorique Final SAGE"]
 
     assert (
@@ -144,8 +151,8 @@ def _get_etat_stock_first_part(
     for col in ["CONSO_DECENTRALISE", "SDU_DECENTRALISE", "CMM_DECENTRALISE"]:
         df_etat_stock[col] = df_etat_stock.apply(
             lambda row: (
-                math.ceil(row[col] / row["facteur_de_conversion"])
-                if not pd.isna(row[col]) and row["facteur_de_conversion"] != 0
+                math.ceil(row[col] / row["facteur_de_conversion"])  # noqa: B023
+                if not pd.isna(row[col]) and row["facteur_de_conversion"] != 0  # noqa: B023
                 else 0
             ),
             axis=1,
@@ -197,7 +204,13 @@ def _get_etat_stock_first_part(
 
     df_etat_stock["STATUT_NATIONAL"] = df_etat_stock.apply(
         lambda row: get_statut_stock(
-            row, programme, min_msd_other=5, max_msd_other=12, min_msd_pnlt=12, max_msd_pnlt=18
+            row,
+            programme,
+            level="NATIONAL",
+            min_msd_other=5,
+            max_msd_other=12,
+            min_msd_pnlt=12,
+            max_msd_pnlt=18,
         ),
         axis=1,
     )
@@ -214,15 +227,18 @@ def _get_etat_stock_second_part(
     df_plan_approv: pd.DataFrame,
     date_report: str,
 ) -> pd.DataFrame:
+    """Calculer les indicateurs de la feuille Annexe 2, seconde partie.
+
+    Returns:
+        pd.DataFrame: DataFrame enrichi avec les indicateurs calculés pour
+        la feuille Annexe 2, seconde partie.
     """
-    Cette fonction permet de calculer les indicateurs de la feuille Annexe - 2 Consilidation séconde partie
-    """
-    code_col = [col for col in df_stock_detaille.columns if "CODE" in str(col).upper()][0]
+    code_col = next(col for col in df_stock_detaille.columns if "CODE" in str(col).upper())
 
     eomonth = (pd.to_datetime(date_report).replace(day=1) + pd.offsets.MonthEnd(0)).strftime(
         "%Y-%m-%d"
     )
-    date_report = pd.to_datetime(date_report, format="%Y-%m-%d")
+    date_report = pd.to_datetime(date_report, format="%Y-%m-%d")  # type: ignore
     df_etat_stock["Date de Péremption la plus proche (BRUTE)"] = df_etat_stock[
         "code_produit"
     ].apply(
@@ -230,7 +246,7 @@ def _get_etat_stock_second_part(
             df_stock_detaille.loc[
                 (df_stock_detaille[code_col] == x) & (df_stock_detaille["Qté \nPhysique"] > 0),
                 "Date limite de consommation",
-            ].min()
+            ].min()  # type: ignore
             if not df_stock_detaille.loc[
                 (df_stock_detaille[code_col] == x) & (df_stock_detaille["Qté \nPhysique"] > 0)
             ].empty
@@ -266,7 +282,7 @@ def _get_etat_stock_second_part(
         axis=1,
     )
 
-    def divide_if_error(x, y):
+    def divide_if_error(x, y):  # noqa: ANN001, ANN202
         try:
             return x / y
         except Exception:
