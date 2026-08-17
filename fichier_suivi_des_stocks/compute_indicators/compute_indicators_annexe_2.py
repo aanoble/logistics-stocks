@@ -1,13 +1,36 @@
 import math
+
 import numpy as np
 import pandas as pd
 from IPython.display import display
 
 
-def get_statut_stock(row, programme, min_msd_other, max_msd_other, min_msd_pnlt, max_msd_pnlt):
-    if row["SDU_CENTRAL"] == 0:
+def get_statut_stock(
+    row: pd.Series,
+    programme: str,
+    level: str,
+    min_msd_other: float,
+    max_msd_other: float,
+    min_msd_pnlt: float,
+    max_msd_pnlt: float,
+) -> str:
+    """Determine stock status based on MSD thresholds and SDU/DMM values.
+
+    Args:
+        row: Row of data containing SDU, DMM, and MSD values.
+        programme: Programme type ("PNLT" or other).
+        level: Stock level indicator.
+        min_msd_other: Minimum MSD threshold for non-PNLT programmes.
+        max_msd_other: Maximum MSD threshold for non-PNLT programmes.
+        min_msd_pnlt: Minimum MSD threshold for PNLT programme.
+        max_msd_pnlt: Maximum MSD threshold for PNLT programme.
+
+    Returns:
+        Stock status string: "Rupture", "Stock dormant", "Sous-Stock", "SurStock", or "Bien Stocké".
+    """
+    if row[f"SDU_{level}"] == 0:
         return "Rupture"
-    elif row["DMM_CENTRAL"] == 0:
+    if row[f"DMM_{level}"] == 0:
         return "Stock dormant"
 
     if programme == "PNLT":
@@ -15,7 +38,7 @@ def get_statut_stock(row, programme, min_msd_other, max_msd_other, min_msd_pnlt,
     else:
         min_msd, max_msd = min_msd_other, max_msd_other
 
-    msd = row["MSD_CENTRAL"]
+    msd = row[f"MSD_{level}"]
     if msd < min_msd:
         return "Sous-Stock"
     if msd > max_msd:
@@ -31,10 +54,7 @@ def _get_etat_stock_first_part(
     programme: str,
     date_report: str,
 ) -> pd.DataFrame:
-    """
-    Cette fonction calcule les indicateurs de la feuilles Annexe 2 - Consolidation
-    """
-
+    """Cette fonction calcule les indicateurs de la feuilles Annexe 2 - Consolidation."""
     df_etat_stock["SDU_CENTRAL"] = df_etat_stock["Stock Théorique Final SAGE"]
 
     assert (
@@ -73,7 +93,13 @@ def _get_etat_stock_first_part(
 
     df_etat_stock["STATUT_CENTRAL"] = df_etat_stock.apply(
         lambda row: get_statut_stock(
-            row, programme, min_msd_other=3, max_msd_other=8, min_msd_pnlt=8, max_msd_pnlt=12
+            row,
+            programme,
+            level="CENTRAL",
+            min_msd_other=3,
+            max_msd_other=8,
+            min_msd_pnlt=8,
+            max_msd_pnlt=12,
         ),
         axis=1,
     )
@@ -136,7 +162,13 @@ def _get_etat_stock_first_part(
 
     df_etat_stock["STATUT_DECENTRALISE"] = df_etat_stock.apply(
         lambda row: get_statut_stock(
-            row, programme, min_msd_other=2, max_msd_other=4, min_msd_pnlt=4, max_msd_pnlt=6
+            row,
+            programme,
+            level="DECENTRALISE",
+            min_msd_other=2,
+            max_msd_other=4,
+            min_msd_pnlt=4,
+            max_msd_pnlt=6,
         ),
         axis=1,
     )
