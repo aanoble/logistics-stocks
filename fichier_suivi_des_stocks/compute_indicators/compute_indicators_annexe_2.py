@@ -4,11 +4,31 @@ import pandas as pd
 from IPython.display import display
 
 
+def get_statut_stock(row, programme, min_msd_other, max_msd_other, min_msd_pnlt, max_msd_pnlt):
+    if row["SDU_CENTRAL"] == 0:
+        return "Rupture"
+    elif row["DMM_CENTRAL"] == 0:
+        return "Stock dormant"
+
+    if programme == "PNLT":
+        min_msd, max_msd = min_msd_pnlt, max_msd_pnlt
+    else:
+        min_msd, max_msd = min_msd_other, max_msd_other
+
+    msd = row["MSD_CENTRAL"]
+    if msd < min_msd:
+        return "Sous-Stock"
+    if msd > max_msd:
+        return "SurStock"
+    return "Bien Stocké"
+
+
 def _get_etat_stock_first_part(
     df_etat_stock: pd.DataFrame,
     df_dmm_curent: pd.DataFrame,
     df_stock_prog_nat: pd.DataFrame,
     df_etat_stock_periph: pd.DataFrame,
+    programme: str,
     date_report: str,
 ) -> pd.DataFrame:
     """
@@ -41,24 +61,20 @@ def _get_etat_stock_first_part(
     )
 
     df_etat_stock["MSD_CENTRAL"] = df_etat_stock.apply(
-        lambda row: 0
-        if row["SDU_CENTRAL"] == 0
-        else "ND"
-        if row["DMM_CENTRAL"] == 0
-        else row["SDU_CENTRAL"] / row["DMM_CENTRAL"],
+        lambda row: (
+            0
+            if row["SDU_CENTRAL"] == 0
+            else "ND"
+            if row["DMM_CENTRAL"] == 0
+            else row["SDU_CENTRAL"] / row["DMM_CENTRAL"]
+        ),
         axis=1,
     )
 
     df_etat_stock["STATUT_CENTRAL"] = df_etat_stock.apply(
-        lambda row: "Rupture"
-        if row["SDU_CENTRAL"] == 0
-        else "Stock dormant"
-        if row["DMM_CENTRAL"] == 0
-        else "Sous-Stock"
-        if row["MSD_CENTRAL"] < 3
-        else "SurStock"
-        if row["MSD_CENTRAL"] > 8
-        else "Bien Stocké",
+        lambda row: get_statut_stock(
+            row, programme, min_msd_other=3, max_msd_other=8, min_msd_pnlt=8, max_msd_pnlt=12
+        ),
         axis=1,
     )
 
@@ -101,9 +117,11 @@ def _get_etat_stock_first_part(
 
     for col in ["CONSO_DECENTRALISE", "SDU_DECENTRALISE", "CMM_DECENTRALISE"]:
         df_etat_stock[col] = df_etat_stock.apply(
-            lambda row: math.ceil(row[col] / row["facteur_de_conversion"])
-            if not pd.isna(row[col]) and row["facteur_de_conversion"] != 0
-            else 0,
+            lambda row: (
+                math.ceil(row[col] / row["facteur_de_conversion"])
+                if not pd.isna(row[col]) and row["facteur_de_conversion"] != 0
+                else 0
+            ),
             axis=1,
         )
         df_etat_stock[col] = df_etat_stock[col].fillna(0)
@@ -117,17 +135,12 @@ def _get_etat_stock_first_part(
     )
 
     df_etat_stock["STATUT_DECENTRALISE"] = df_etat_stock.apply(
-        lambda row: "Rupture"
-        if row["SDU_DECENTRALISE"] == 0
-        else "Stock dormant"
-        if row["CMM_DECENTRALISE"] == 0
-        else "Sous-Stock"
-        if row["MSD_DECENTRALISE"] < 2
-        else "SurStock"
-        if row["MSD_DECENTRALISE"] > 4
-        else "Bien Stocké",
+        lambda row: get_statut_stock(
+            row, programme, min_msd_other=2, max_msd_other=4, min_msd_pnlt=4, max_msd_pnlt=6
+        ),
         axis=1,
     )
+
     df_etat_stock["nombre_de_site_en_rupture_annexe_2"] = df_etat_stock["code_produit"].apply(
         lambda x: df_etat_stock_periph.loc[
             (df_etat_stock_periph.Code_produit == x)
@@ -140,24 +153,20 @@ def _get_etat_stock_first_part(
     df_etat_stock["CMM_NATIONAL"] = df_etat_stock["CMM_DECENTRALISE"]
 
     df_etat_stock["MSD_NATIONAL"] = df_etat_stock.apply(
-        lambda row: 0
-        if row["SDU_NATIONAL"] == 0
-        else "ND"
-        if row["CMM_NATIONAL"] == 0
-        else row["SDU_NATIONAL"] / row["CMM_NATIONAL"],
+        lambda row: (
+            0
+            if row["SDU_NATIONAL"] == 0
+            else "ND"
+            if row["CMM_NATIONAL"] == 0
+            else row["SDU_NATIONAL"] / row["CMM_NATIONAL"]
+        ),
         axis=1,
     )
 
     df_etat_stock["STATUT_NATIONAL"] = df_etat_stock.apply(
-        lambda row: "Rupture"
-        if row["SDU_NATIONAL"] == 0
-        else "Stock dormant"
-        if row["CMM_NATIONAL"] == 0
-        else "Sous-Stock"
-        if row["MSD_NATIONAL"] < 5
-        else "SurStock"
-        if row["MSD_NATIONAL"] > 12
-        else "Bien Stocké",
+        lambda row: get_statut_stock(
+            row, programme, min_msd_other=5, max_msd_other=12, min_msd_pnlt=12, max_msd_pnlt=18
+        ),
         axis=1,
     )
 
@@ -185,14 +194,16 @@ def _get_etat_stock_second_part(
     df_etat_stock["Date de Péremption la plus proche (BRUTE)"] = df_etat_stock[
         "code_produit"
     ].apply(
-        lambda x: df_stock_detaille.loc[
-            (df_stock_detaille[code_col] == x) & (df_stock_detaille["Qté \nPhysique"] > 0),
-            "Date limite de consommation",
-        ].min()
-        if not df_stock_detaille.loc[
-            (df_stock_detaille[code_col] == x) & (df_stock_detaille["Qté \nPhysique"] > 0)
-        ].empty
-        else np.nan
+        lambda x: (
+            df_stock_detaille.loc[
+                (df_stock_detaille[code_col] == x) & (df_stock_detaille["Qté \nPhysique"] > 0),
+                "Date limite de consommation",
+            ].min()
+            if not df_stock_detaille.loc[
+                (df_stock_detaille[code_col] == x) & (df_stock_detaille["Qté \nPhysique"] > 0)
+            ].empty
+            else np.nan
+        )
     )
 
     df_etat_stock["Date de Péremption la plus proche"] = df_etat_stock[
@@ -200,24 +211,26 @@ def _get_etat_stock_second_part(
     ].apply(lambda x: np.nan if pd.isna(x) else x)
 
     df_etat_stock["Quantité correspondante"] = df_etat_stock.apply(
-        lambda row: np.nan
-        if pd.isna(row["Date de Péremption la plus proche"])
-        else df_stock_detaille.loc[
-            (df_stock_detaille[code_col] == row["code_produit"])
-            & (
-                df_stock_detaille["Date limite de consommation"]
-                == row["Date de Péremption la plus proche"]
-            ),
-            "Qté \nPhysique",
-        ].sum()
-        if not df_stock_detaille.loc[
-            (df_stock_detaille[code_col] == row["code_produit"])
-            & (
-                df_stock_detaille["Date limite de consommation"]
-                == row["Date de Péremption la plus proche"]
-            )
-        ].empty
-        else np.nan,
+        lambda row: (
+            np.nan
+            if pd.isna(row["Date de Péremption la plus proche"])
+            else df_stock_detaille.loc[
+                (df_stock_detaille[code_col] == row["code_produit"])
+                & (
+                    df_stock_detaille["Date limite de consommation"]
+                    == row["Date de Péremption la plus proche"]
+                ),
+                "Qté \nPhysique",
+            ].sum()
+            if not df_stock_detaille.loc[
+                (df_stock_detaille[code_col] == row["code_produit"])
+                & (
+                    df_stock_detaille["Date limite de consommation"]
+                    == row["Date de Péremption la plus proche"]
+                )
+            ].empty
+            else np.nan
+        ),
         axis=1,
     )
 
@@ -228,9 +241,11 @@ def _get_etat_stock_second_part(
             return "NA"
 
     df_etat_stock["MSD correspondant"] = df_etat_stock.apply(
-        lambda row: ""
-        if pd.isna(row["Quantité correspondante"])
-        else divide_if_error(row["Quantité correspondante"], row["DMM_CENTRAL"]),
+        lambda row: (
+            ""
+            if pd.isna(row["Quantité correspondante"])
+            else divide_if_error(row["Quantité correspondante"], row["DMM_CENTRAL"])
+        ),
         axis=1,
     )
 
@@ -246,23 +261,27 @@ def _get_etat_stock_second_part(
     )
 
     df_etat_stock["MSD reçu Annexe 2"] = df_etat_stock.apply(
-        lambda row: row["Qtité réceptionnés non en Stock Annexe 2"] / row.DMM_CENTRAL
-        if not pd.isna(row.DMM_CENTRAL) and row.DMM_CENTRAL != 0
-        else 0,
+        lambda row: (
+            row["Qtité réceptionnés non en Stock Annexe 2"] / row.DMM_CENTRAL
+            if not pd.isna(row.DMM_CENTRAL) and row.DMM_CENTRAL != 0
+            else 0
+        ),
         axis=1,
     )
 
     df_etat_stock["Date Probable de Livraison Annexe 2"] = df_etat_stock.apply(
-        lambda row: df_plan_approv.loc[
-            (df_plan_approv["Standard product code"] == row["code_produit"])
-            & (df_plan_approv["DATE"] >= eomonth),
-            "DATE",
-        ].min()
-        if not df_plan_approv.loc[
-            (df_plan_approv["Standard product code"] == row["code_produit"])
-            & (df_plan_approv["DATE"] >= eomonth)
-        ].empty
-        else "",
+        lambda row: (
+            df_plan_approv.loc[
+                (df_plan_approv["Standard product code"] == row["code_produit"])
+                & (df_plan_approv["DATE"] >= eomonth),
+                "DATE",
+            ].min()
+            if not df_plan_approv.loc[
+                (df_plan_approv["Standard product code"] == row["code_produit"])
+                & (df_plan_approv["DATE"] >= eomonth)
+            ].empty
+            else ""
+        ),
         axis=1,
     )
     # code_col = [col for col in df_receptions.columns if 'CODE' in str(col).upper()][0]
@@ -279,33 +298,40 @@ def _get_etat_stock_second_part(
     )
 
     df_etat_stock["Qtité attendue Annexe 2"] = df_etat_stock.apply(
-        lambda row: np.nan
-        if pd.isna(row["Date Probable de Livraison Annexe 2"])
-        else df_plan_approv.loc[
-            (df_plan_approv["Standard product code"] == row["code_produit"])
-            & (df_plan_approv["DATE"] == row["Date Probable de Livraison Annexe 2"]),
-            "Quantité harmonisée (SAGE)",
-        ].sum(),
+        lambda row: (
+            np.nan
+            if pd.isna(row["Date Probable de Livraison Annexe 2"])
+            else df_plan_approv.loc[
+                (df_plan_approv["Standard product code"] == row["code_produit"])
+                & (df_plan_approv["DATE"] == row["Date Probable de Livraison Annexe 2"]),
+                "Quantité harmonisée (SAGE)",
+            ].sum()
+        ),
         axis=1,
     )
 
     df_etat_stock["MSD attendu Annexe 2"] = df_etat_stock.apply(
-        lambda row: row["Qtité attendue Annexe 2"] / row.DMM_CENTRAL
-        if not pd.isna(row.DMM_CENTRAL)
-        and row.DMM_CENTRAL != 0
-        and row["Qtité attendue Annexe 2"] != ""
-        else 0,
+        lambda row: (
+            row["Qtité attendue Annexe 2"] / row.DMM_CENTRAL
+            if not pd.isna(row.DMM_CENTRAL)
+            and row.DMM_CENTRAL != 0
+            and row["Qtité attendue Annexe 2"] != ""
+            else 0
+        ),
         axis=1,
     )
 
     df_etat_stock["code_and_date_concate"] = df_etat_stock.apply(
-        lambda row: str(int(row["code_produit"]))
-        + "_"
-        + str(row["Date Probable de Livraison Annexe 2"]).replace(" 00:00:00", "")
-        if not pd.isna(row["code_produit"])
-        else "_" + str(row["Date Probable de Livraison Annexe 2"]).replace(" 00:00:00", "")
-        if pd.isna(row["code_produit"]) and not pd.isna(row["Date Probable de Livraison Annexe 2"])
-        else np.nan,
+        lambda row: (
+            str(int(row["code_produit"]))
+            + "_"
+            + str(row["Date Probable de Livraison Annexe 2"]).replace(" 00:00:00", "")
+            if not pd.isna(row["code_produit"])
+            else "_" + str(row["Date Probable de Livraison Annexe 2"]).replace(" 00:00:00", "")
+            if pd.isna(row["code_produit"])
+            and not pd.isna(row["Date Probable de Livraison Annexe 2"])
+            else np.nan
+        ),
         axis=1,
     )
 
@@ -474,9 +500,11 @@ def _get_etat_stock_end_part(
     cols = [col for col in df_etat_stock.columns if "msd" in col]
     for col in cols:
         df_etat_stock[col] = df_etat_stock[col].apply(
-            lambda x: str(round(float(x), 1)).replace(".", ",")
-            if not pd.isna(x) and x != "ND" and x != "NA" and x != ""
-            else x
+            lambda x: (
+                str(round(float(x), 1)).replace(".", ",")
+                if not pd.isna(x) and x != "ND" and x != "NA" and x != ""
+                else x
+            )
         )
 
     # Formattage du champ date
@@ -486,9 +514,9 @@ def _get_etat_stock_end_part(
         try:
             # df_etat_stock[col] = df_etat_stock[col].str.replace('T00:00:00Z', '')
             df_etat_stock[col] = df_etat_stock[col].apply(
-                lambda x: pd.to_datetime(str(x)[:10], format="%Y-%m-%d")
-                if len(str(x)) >= 10
-                else np.nan
+                lambda x: (
+                    pd.to_datetime(str(x)[:10], format="%Y-%m-%d") if len(str(x)) >= 10 else np.nan
+                )
             )
         except Exception:
             # df_etat_stock[col] = df_etat_stock[col].apply(lambda x: pd.to_datetime(str(x)[:10], format="%Y-%m-%d"))
@@ -509,6 +537,7 @@ def compute_indicators_annexe_2(
     df_stock_detaille: pd.DataFrame,
     df_receptions: pd.DataFrame,
     df_plan_approv: pd.DataFrame,
+    programme: str,
     date_report: str,
 ) -> pd.DataFrame:
     """
@@ -516,7 +545,12 @@ def compute_indicators_annexe_2(
     """
 
     df_etat_stock = _get_etat_stock_first_part(
-        df_etat_stock, df_dmm_curent, df_stock_prog_nat, df_etat_stock_periph, date_report
+        df_etat_stock,
+        df_dmm_curent,
+        df_stock_prog_nat,
+        df_etat_stock_periph,
+        programme=programme,
+        date_report=date_report,
     )
 
     df_etat_stock = _get_etat_stock_second_part(
