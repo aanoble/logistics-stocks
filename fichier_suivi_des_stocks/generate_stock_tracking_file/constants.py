@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 from openpyxl.formatting.rule import CellIsRule, Rule
 from openpyxl.styles import Alignment, Border, Font, NamedStyle, PatternFill, Side
 from openpyxl.styles.differential import DifferentialStyle
@@ -181,6 +182,15 @@ DICO_FORMULES_ANNEXE_2 = {
     38: '=MAXIFS(Receptions!F:F,Receptions!C:C,A{0}, Receptions!J:J, "ok")',
     # ---> Delivery status
     39: "=IFERROR(INDEX('Plan d''appro'!G:G,MATCH(A{0}&\"_\"&AK{0},'Plan d''appro'!T:T,0),1),\"\")",
+}
+
+DICO_STATUT_STOCK_PNLT = {
+    # STATUT (niveau central)
+    12: '=IF(I{0}=0,"Rupture",IF(J{0}=0,"Stock dormant",IF(K{0}<8,"Sous-Stock",IF(K{0}>12,"SurStock","Bien Stocké"))))',
+    # STATUT (niveau décentralisé)
+    17: '=IF(N{0}=0,"Rupture",IF(O{0}=0,"Stock dormant",IF(P{0}<4,"Sous-Stock",IF(P{0}>6,"SurStock","Bien Stocké"))))',
+    # STATUT (niveau National)
+    22: '=IF(S{0}=0,"Rupture",IF(T{0}=0,"Stock dormant",IF(U{0}<12, "Sous-Stock", IF(U{0}>18,"SurStock","Bien Stocké"))))',
 }
 
 DICO_FORMULES_PREVISION = {
