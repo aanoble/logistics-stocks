@@ -1,3 +1,4 @@
+# type: ignore 
 import numpy as np
 import pandas as pd
 from efc.interfaces.iopenpyxl import OpenpyxlInterface
@@ -14,6 +15,7 @@ from .constants import (
     DATE_STYLE,
     DICO_FORMULES_ANNEXE_2,
     DICO_RULES_ANNEXE_2,
+    DICO_STATUT_STOCK_PNLT,
     HEADER_FONT,
     THIN_BORDER,
 )
@@ -22,18 +24,21 @@ from .utils import get_current_variable
 
 def update_sheet_annexe_2(
     wb_temp: Workbook,
-    df_plan_approv,
+    df_plan_approv: pd.DataFrame,
+    programme: str,
     date_report: str,
-):
-    """
-    Met à jour la feuille 'Annexe 2 - Suivi des Stocks' dans le workbook donné en utilisant les données fournies.
+) -> Workbook:
+    """Met à jour la feuille 'Annexe 2 - Suivi des Stocks' dans le workbook donné en utilisant les données fournies.
+
     Args:
         wb_temp (Workbook): Le modèle de workbook à mettre à jour.
         df_plan_approv (DataFrame): Le dataframe contenant les informations de plan d'approvisionnement.
+        programme (str): Le nom du programme.
         date_report (str): La date de conception du rapport.
+
     Returns:
         Workbook: Le workbook mis à jour.
-    """
+    """  # noqa: E501
     date_format = get_current_variable(date_report)[0]
     # Construction du data frame stock detaillé
     data = wb_temp["Stock detaille"].values
@@ -125,7 +130,7 @@ def update_sheet_annexe_2(
     interface = OpenpyxlInterface(wb=wb_temp, use_cache=True)
     interface.clear_cache()
 
-    def format_cell_annexe_2(cell, col_idx):
+    def format_cell_annexe_2(cell, col_idx) -> None:  # noqa: ANN001
         cell.border = THIN_BORDER
         cell.font = HEADER_FONT if col_idx in special_font_bold_indices else BODY_FONT
         cell.alignment = (
@@ -142,10 +147,14 @@ def update_sheet_annexe_2(
     max_row_annexe_1 = wb_temp["Annexe 1 - Consolidation"].max_row
 
     for start in range(5, max_row_annexe_1 + 1):
-        for col_idx, formula in DICO_FORMULES_ANNEXE_2.items():
-            if formula is None:
+        for col_idx, formula_template in DICO_FORMULES_ANNEXE_2.items():
+            if formula_template is None:
                 cell = ws_annexe_2.cell(row=start, column=col_idx)
                 cell.border = THIN_BORDER
+
+            formula = formula_template
+            if programme == "PNLT" and col_idx in (12, 17, 22):
+                formula = DICO_STATUT_STOCK_PNLT[col_idx]
 
             if col_idx not in (23, 38, 40):
                 cell = ws_annexe_2.cell(row=start, column=col_idx, value=formula.format(start))
