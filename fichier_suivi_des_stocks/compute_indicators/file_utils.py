@@ -11,6 +11,7 @@ from openhexa.sdk import workspace
 from openpyxl.worksheet.dimensions import ColumnDimension, RowDimension
 
 from .fetch_pa_from_qat import extract_pa
+import contextlib
 
 
 def process_pa_files(
@@ -19,13 +20,14 @@ def process_pa_files(
     programme: str,
     date_report: str,
 ) -> pd.DataFrame:
-    """
-    Process and merge plan approval files with product mapping data.
+    """Process and merge plan approval files with product mapping data.
+
     Args:
         fp_plan_approv (PosixPath): Path to the directory or file containing plan approval CSV files.
         fp_map_prod (PosixPath): Path to the Excel file containing product mapping data.
         programme (str): The sheet name in the Excel file to be used for product mapping.
         date_report (str): The date of the report in the format "YYYY-MM-DD".
+
     Returns:
         pd.DataFrame: A DataFrame containing the processed and merged data.
     """
@@ -49,10 +51,10 @@ def process_pa_files(
         data = []
 
         # Fonction pour traiter un fichier unique
-        def _process_pa_file(fichier):
+        def _process_pa_file(fichier: Path) -> None:
             nonlocal data
             version = None
-            with open(file=fichier) as file:
+            with Path(fichier).open(encoding="utf-8") as file:
                 for line in file.readlines():
                     if version is None and "version" in line.lower():
                         try:
@@ -67,11 +69,11 @@ def process_pa_files(
                             + list_element
                         )
 
-        if os.path.isdir(fp_plan_approv):
+        if Path(fp_plan_approv).is_dir():
             for root, _, files in os.walk(fp_plan_approv):
                 for file in files:
                     if file.endswith(".csv"):
-                        _process_pa_file(os.path.join(root, file))
+                        _process_pa_file(Path(root) / file)
         else:
             _process_pa_file(fp_plan_approv)
 
@@ -85,13 +87,11 @@ def process_pa_files(
             == "ID de produit QAT / Identifiant de produit (prévision)"
         ].index
 
-        df_plan_approv.drop(index=bad_index, inplace=True)
+        df_plan_approv = df_plan_approv.drop(index=bad_index)
 
         for col in ["ID de produit QAT / Identifiant de produit (prévision)", "ID de l`envoi QAT"]:
-            try:
+            with contextlib.suppress(Exception):
                 df_plan_approv[col] = df_plan_approv[col].astype("Int64")
-            except Exception:
-                pass
 
     for col in [
         "Coût unitaire de produit (USD)",
@@ -99,17 +99,13 @@ def process_pa_files(
         "Quantité",
         "Coût total (USD)",
     ]:
-        try:
+        with contextlib.suppress(Exception):
             df_plan_approv[col] = df_plan_approv[col].astype(float)
-        except Exception:
-            pass
 
-    try:
+    with contextlib.suppress(Exception):
         df_plan_approv["date de réception"] = df_plan_approv["date de réception"].apply(
             lambda date_str: datetime.strptime(date_str, "%d-%b-%Y")
         )
-    except Exception:
-        pass
 
     # Nettoyage des espaces blancs dans les données
     df_plan_approv = df_plan_approv.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
@@ -120,7 +116,7 @@ def process_pa_files(
         df_map_prod.columns.str.replace("Ã©", "é").str.replace("â", "").str.rstrip().str.lstrip()
     )
 
-    df_map_prod.rename(
+    df_map_prod = df_map_prod.rename(
         columns={
             "Code QAT": "ID de produit QAT / Identifiant de produit (prévision)",
             "Code standard national": "Standard product code",
@@ -128,7 +124,6 @@ def process_pa_files(
             "Facteur de conversion QAT vers SAGE": "facteur_de_conversion_qat_sage",
             "Acronym": "acronym",
         },
-        inplace=True,
     )
 
     df_map_prod = df_map_prod.drop_duplicates()
@@ -146,7 +141,7 @@ def process_pa_files(
         how="left",
     )
 
-    df_plan_approv.rename(
+    df_plan_approv = df_plan_approv.rename(
         columns={
             "ID de produit QAT / Identifiant de produit (prévision)": "ID de produit QAT",
             "Produit (planification) / Produit (prévision)": "Produits",
@@ -157,7 +152,6 @@ def process_pa_files(
             "Coût du fret (USD)": "Couts du fret",
             "Coût total (USD)": "Couts totaux",
         },
-        inplace=True,
     )
 
     df_plan_approv["cout_unitaire_moyen_qat"] = (
@@ -167,7 +161,7 @@ def process_pa_files(
     )
 
     df_plan_approv["code_and_date_concate"] = df_plan_approv.apply(
-        lambda row: _get_code_and_date_concate(row), axis=1
+        _get_code_and_date_concate, axis=1
     )
 
     return df_plan_approv
@@ -176,18 +170,18 @@ def process_pa_files(
 def process_etat_stock_npsp(
     df_etat_stock_npsp: pd.DataFrame, date_report: str, programme: str
 ) -> pd.DataFrame:
-    """
-    Traite le DataFrame de l'état des stocks NPSP en renommant les colonnes,
+    """Traite le DataFrame de l'état des stocks NPSP en renommant les colonnes,
     en ajoutant la date du rapport et le programme, et en sélectionnant les colonnes pertinentes.
+
     Args:
         df_etat_stock_npsp (pd.DataFrame): Le DataFrame contenant les données de l'état des stocks NPSP.
         date_report (str): La date du rapport au format 'YYYY-MM-DD'.
         programme (str): Le programme associé aux données.
+
     Returns:
         pd.DataFrame: Le DataFrame traité avec les colonnes renommées, la date du rapport et le programme ajoutés.
-    """
-
-    COLUMN_MAPPING = {
+    """  # noqa: D205, E501
+    COLUMN_MAPPING = {  # noqa: N806
         r"Nouveau code": "code_produit",
         r"Nouvelle désignation": "designation",
         r"Contenance": "contenance",
@@ -202,11 +196,10 @@ def process_etat_stock_npsp(
         r"Nombre de jour de rupture": "nb_jour_rupture",
     }
 
-    df_etat_stock_npsp.rename(
+    df_etat_stock_npsp = df_etat_stock_npsp.rename(
         columns=lambda col: next(
             (v for k, v in COLUMN_MAPPING.items() if re.search(k, col, re.I)), col
         ),
-        inplace=True,
     )
 
     df_etat_stock_npsp["date_report"] = pd.to_datetime(date_report, format="%Y-%m-%d")
@@ -236,7 +229,7 @@ def process_etat_stock_npsp(
     return df_etat_stock_npsp
 
 
-def _get_code_and_date_concate(row):
+def _get_code_and_date_concate(row) -> str | float:
     try:
         if not pd.isna(row["Standard product code"]):
             return (
@@ -244,10 +237,9 @@ def _get_code_and_date_concate(row):
                 + "_"
                 + str(row["DATE"]).replace(" 00:00:00", "")
             )
-        elif pd.isna(row["Standard product code"]) and not pd.isna(row["DATE"]):
+        if pd.isna(row["Standard product code"]) and not pd.isna(row["DATE"]):
             return "_" + str(row["DATE"]).replace(" 00:00:00", "")
-        else:
-            return np.nan
+        return np.nan
     except Exception:
         try:
             return "_" + str(row["DATE"]).replace(" 00:00:00", "")
@@ -259,15 +251,14 @@ DATE_EXTRACT_PATTERN = re.compile(r"\((\w{3,9} \d{1,2} \d{4})\)")
 
 
 def _process_pa_version(pa_version: str):
-    """
-    Extracts the version number and date from the plan approval version string.
+    """Extracts the version number and date from the plan approval version string.
+
     Args:
         pa_version (str): The version string of the plan approval.
 
     Returns:
         list: A list containing the version number and date as a datetime object.
     """
-
     number, date_obj = None, None
 
     # Utilisé pour extraire le nombre de début
@@ -288,11 +279,12 @@ def _process_pa_version(pa_version: str):
 
 
 def _find_sheet_by_keyword(wb: pyxl.Workbook, keyword: str) -> str | None:
-    """
-    Retrouve le nom exact d'une feuille contenant un mot-clé (insensible à la casse).
+    """Retrouve le nom exact d'une feuille contenant un mot-clé (insensible à la casse).
+
     Args:
         wb (pyxl.Workbook): Le classeur dans lequel rechercher la feuille.
         keyword (str): Le mot-clé à rechercher dans les noms de feuilles.
+
     Returns:
         str | None: Le nom exact de la feuille si trouvée, sinon None.
     """
@@ -302,15 +294,15 @@ def _find_sheet_by_keyword(wb: pyxl.Workbook, keyword: str) -> str | None:
 def _copy_sheet(
     src_wb: pyxl.Workbook, src_sheet_name: str, dest_wb: pyxl.Workbook, new_sheet_name: str
 ) -> None:
-    """
-    Copie une feuille (valeurs, formules, styles, fusions, largeurs de colonnes)
+    """Copie une feuille (valeurs, formules, styles, fusions, largeurs de colonnes)
     d'un classeur source vers un classeur destination.
+
     Args:
         src_wb (pyxl.Workbook): Le classeur source (ex: le template).
         src_sheet_name (str): Le nom de la feuille à copier depuis le classeur source.
         dest_wb (pyxl.Workbook): Le classeur destination (ex: le fichier programme).
         new_sheet_name (str): Le nom à donner à la feuille copiée dans le classeur destination.
-    """
+    """  # noqa: D205
     src_ws = src_wb[src_sheet_name]
     dest_ws = dest_wb.create_sheet(title=new_sheet_name)
 
@@ -342,14 +334,14 @@ def _copy_sheet(
 
 
 def _fix_etat_de_stock_headers(wb: pyxl.Workbook) -> None:
-    """
-    Renomme les en-têtes de la feuille "Etat de stock <programme>" pour qu'ils
+    """Renomme les en-têtes de la feuille "Etat de stock <programme>" pour qu'ils
     correspondent au template : "Code" -> "Nouveau code" et la 2e occurrence de
     "Désignation" -> "Nouvelle désignation". Ne fait rien si les en-têtes sont
     déjà conformes.
+
     Args:
         wb (pyxl.Workbook): Le classeur du fichier programme (modifié en place).
-    """
+    """  # noqa: D205
     sheet_name = _find_sheet_by_keyword(wb, "Etat de stock")
     if sheet_name is None:
         return
@@ -376,8 +368,7 @@ def _fix_etat_de_stock_headers(wb: pyxl.Workbook) -> None:
 
 
 def _remove_last_column(wb: pyxl.Workbook) -> None:
-    """
-    Vide la cellule d'en-tête vide qui suit immédiatement la dernière colonne
+    """Vide la cellule d'en-tête vide qui suit immédiatement la dernière colonne
     d'en-tête (avec contenu) sur la feuille "Etat de stock <programme>",
     après adaptation des en-têtes. Cette colonne est repérée par rapport à
     la ligne d'en-tête (celle contenant "Programme" en première colonne).
@@ -388,7 +379,7 @@ def _remove_last_column(wb: pyxl.Workbook) -> None:
     est vidée (valeur et mise en forme), sans aucun décalage des autres
     lignes ni des autres colonnes.
 
-    """
+    """  # noqa: D205
     sheet_name = _find_sheet_by_keyword(wb, "Etat de stock")
     if sheet_name is None:
         return
@@ -427,8 +418,7 @@ def _remove_last_column(wb: pyxl.Workbook) -> None:
 
 
 def _adapt_ppi_sheet(template_wb: pyxl.Workbook, programme_wb: pyxl.Workbook) -> None:
-    """
-    Quand la feuille "PPI" existe déjà dans le fichier programme, adapte ses
+    """Quand la feuille "PPI" existe déjà dans le fichier programme, adapte ses
     colonnes pour qu'elles correspondent exactement à celles du template :
     - renomme et réordonne les colonnes reconnues (Code Produit, Nom Produit,
       Unite, Numéro Lot, Date Peremption, Quantité) selon des alias courants
@@ -440,10 +430,11 @@ def _adapt_ppi_sheet(template_wb: pyxl.Workbook, programme_wb: pyxl.Workbook) ->
     Si la feuille "PPI" n'existe pas dans le fichier programme, cette fonction
     ne fait rien (c'est _ensure_ppi_sheet qui gère la copie depuis le template
     dans ce cas).
+
     Args:
         template_wb (pyxl.Workbook): Le classeur du template de référence.
         programme_wb (pyxl.Workbook): Le classeur du fichier programme (modifié en place).
-    """
+    """  # noqa: D205
     sheet_name = _find_sheet_by_keyword(programme_wb, "PPI")
     if sheet_name is None:
         return
@@ -471,7 +462,7 @@ def _adapt_ppi_sheet(template_wb: pyxl.Workbook, programme_wb: pyxl.Workbook) ->
         template_columns.append(val)
         col += 1
 
-    COLUMN_ALIASES = {
+    COLUMN_ALIASES = {  # noqa: N806
         # Chaque programme (PNLP, PNLT, PNLS...) exporte sa feuille PPI avec
         # des noms de colonnes différents selon l'outil/la personne qui l'a
         # produite (ex: "ARTICLE" au lieu de "Code Produit", "DLC" au lieu
@@ -579,13 +570,13 @@ def _adapt_ppi_sheet(template_wb: pyxl.Workbook, programme_wb: pyxl.Workbook) ->
 
 
 def _ensure_ppi_sheet(template_wb: pyxl.Workbook, programme_wb: pyxl.Workbook) -> None:
-    """
-    Ajoute la feuille "PPI" (copiée depuis le template) au fichier programme si
+    """Ajoute la feuille "PPI" (copiée depuis le template) au fichier programme si
     elle n'y existe pas déjà.
+
     Args:
         template_wb (pyxl.Workbook): Le classeur du template de référence.
         programme_wb (pyxl.Workbook): Le classeur du fichier programme (modifié en place).
-    """
+    """  # noqa: D205
     if _find_sheet_by_keyword(programme_wb, "PPI") is not None:
         return
 
@@ -599,8 +590,7 @@ def _ensure_ppi_sheet(template_wb: pyxl.Workbook, programme_wb: pyxl.Workbook) -
 def adapt_programme_file_to_template(
     fp_etat_mensuel: PosixPath, template_path: PosixPath
 ) -> PosixPath:
-    """
-    Adapte le fichier "Etat Mensuel" d'un programme au format du template de référence :
+    """Adapte le fichier "Etat Mensuel" d'un programme au format du template de référence :
     - renomme les en-têtes de la feuille "Etat de stock" si nécessaire
       (Code -> Nouveau code, Désignation -> Nouvelle désignation)
     - vide la cellule d'en-tête vide juste après le dernier champ renseigné
@@ -618,13 +608,15 @@ def adapt_programme_file_to_template(
     (souvent la seule copie disponible) reste intact et récupérable ;
     (2) ça facilite le débogage en gardant les deux versions (avant/après)
     consultables côte à côte.
+
     Args:
         fp_etat_mensuel (PosixPath): Chemin du fichier "Etat Mensuel" du programme à adapter.
         template_path (PosixPath): Chemin du fichier template de référence.
+
     Returns:
         PosixPath: Le chemin du nouveau fichier programme corrigé.
-    """
-    fp_etat_mensuel = Path(fp_etat_mensuel)
+    """  # noqa: D205
+    fp_etat_mensuel = Path(fp_etat_mensuel)  # type: ignore
 
     template_wb = pyxl.load_workbook(template_path)
     programme_wb = pyxl.load_workbook(fp_etat_mensuel)

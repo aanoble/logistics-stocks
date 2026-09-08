@@ -185,8 +185,8 @@ def update_dmm_informations_on_sheet(
     date_report,
     auto_computed_dmm: bool = True,
 ) -> Tuple[Worksheet, pd.DataFrame]:
-    """
-    Met à jour les informations DMM sur la feuille de calcul "Annexe 1 - Consolidation".
+    """Met à jour les informations DMM sur la feuille de calcul "Annexe 1 - Consolidation".
+
     Args:
         wb_temp (Workbook): Le classeur Excel temporaire.
         date_report (datetime): La date du rapport.
@@ -194,6 +194,7 @@ def update_dmm_informations_on_sheet(
         df_dmm_histo (DataFrame): Le DataFrame contenant les informations historiques des Distributions sélectionnées.
         df_produit (DataFrame): Le DataFrame contenant les informations des produits.
         auto_computed_dmm (bool, optional): Indique si la DMM doit être calculée automatiquement. Defaults to True.
+
     Returns:
         Tuple[Worksheet, pd.DataFrame]: La feuille de calcul mise à jour et le DataFrame des produits.
     """
