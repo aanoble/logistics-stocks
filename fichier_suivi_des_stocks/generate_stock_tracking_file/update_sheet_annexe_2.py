@@ -1,6 +1,7 @@
-# type: ignore 
+# type: ignore
 import numpy as np
 import pandas as pd
+from compute_indicators.utils import normaliser_dlc
 from efc.interfaces.iopenpyxl import OpenpyxlInterface
 from openpyxl import Workbook
 from openpyxl.comments import Comment
@@ -47,6 +48,9 @@ def update_sheet_annexe_2(
 
     df_stock_detaille = pd.DataFrame(data, columns=cols)
     df_stock_detaille = df_stock_detaille.loc[df_stock_detaille["Code produit"].notna()]
+    df_stock_detaille["Date limite de consommation"] = pd.to_datetime(
+        df_stock_detaille["Date limite de consommation"].apply(normaliser_dlc)
+    )
     for col in ("Code produit", "Qté \nPhysique"):
         try:
             df_stock_detaille[col] = df_stock_detaille[col].astype(np.int64)

@@ -1,25 +1,36 @@
+# type: ignore
 from compute_indicators.utils import check_if_sheet_name_in_file
 from efc.interfaces.iopenpyxl import OpenpyxlInterface
+from openpyxl import Workbook
 from openpyxl.formatting.rule import Rule
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.styles.differential import DifferentialStyle
 
 from .utils import find_best_match, get_current_variable, has_formula
 
+SITES_STOCK = ("BOUAKE", "ABIDJAN", "CENTRALE")
 
-def update_data_on_sheet(wb_base, ws_base, ws_temp, sheet_name, programme, date_report, max_row):
-    """
-    Sert à actualiser les donnée des feuilles en utilisant la source de d'origine
+
+def update_data_on_sheet(
+    wb_base: Workbook,
+    ws_base: Workbook,
+    ws_temp: Workbook,
+    sheet_name: str,
+    programme: str,
+    date_report: str,
+    max_row: int,
+) -> None:
+    """Sert à actualiser les donnée des feuilles en utilisant la source de d'origine.
 
     Args:
         wb_base (workbook): workbook etat stock mensuel
+        ws_base (workbook): worksheet du workbook etat stock mensuel
         ws_temp (workbook): worksheet du template
         sheet_name (str): le nom de la feuille
         programme (str): le nom du programme
         date_report (str): date de conception du rapport
         max_row (int): à partir de quelle ligne dois-t-on commencer les itérations
     """
-
     dico_cols = {}
 
     if sheet_name == "Etat de stock":
@@ -37,14 +48,27 @@ def update_data_on_sheet(wb_base, ws_base, ws_temp, sheet_name, programme, date_
     for row_base, row_temp in zip(
         ws_base.iter_rows(min_row=max_row, max_row=max_row),
         ws_temp.iter_rows(min_row=max_row, max_row=max_row),
+        strict=False,
     ):
         values = [cell.value for cell in row_base if cell.value is not None]
         for cell in row_temp:
-            match_index = (
-                find_best_match(cell.value, values)
-                if cell.value.strip() != "Quantité livrée"
-                else find_best_match("Quantité livrée", values)
-                or find_best_match("Qté livrée", values)
+            if not isinstance(cell.value, str):
+                continue
+            libelle = cell.value.strip()
+
+            if libelle == "Quantité livrée":
+                candidats = ("Quantité livrée", "Qté livrée")
+            elif "Stock" in libelle and (
+                site := next((s for s in SITES_STOCK if s in libelle), None)
+            ):
+                candidats = (f"Stock Inventaire {site}", f"Stock Théorique {site}")
+            else:
+                candidats = (cell.value,)
+
+            # 1er candidat qui matche l'en-tête source (index 1-based, donc jamais 0).
+            match_index = next(
+                (i for i in (find_best_match(c, values) for c in candidats) if i),
+                None,
             )
             if match_index is not None:
                 dico_cols[match_index] = cell.col_idx
@@ -74,8 +98,6 @@ def update_data_on_sheet(wb_base, ws_base, ws_temp, sheet_name, programme, date_
                 new_cell = ws_temp.cell(
                     row=cell.row, column=dico_cols[cell.col_idx], value=cell.value
                 )
-            else:
-                pass
 
             if cell.has_style:
                 new_cell.font = cell.font.copy()
@@ -96,9 +118,9 @@ def update_data_on_sheet(wb_base, ws_base, ws_temp, sheet_name, programme, date_
 
         # start+=1
         if sheet_name == "Stock detaille":
-            ws_temp[f"J{start}"] = '=IFERROR(D{0}-TODAY(),"")'.format(start)
+            ws_temp[f"J{start}"] = f'=IFERROR(D{start}-TODAY(),"")'
             ws_temp[f"K{start}"] = (
-                '=IF(J{0}<180,"RED", IF(AND(J{0}>=180,J{0}<=365),"ORANGE","GREEN"))'.format(start)
+                f'=IF(J{start}<180,"RED", IF(AND(J{start}>=180,J{start}<=365),"ORANGE","GREEN"))'
             )
             ws_temp[f"J{start}"].font = ws_temp[f"K{start}"].font = font
             ws_temp[f"J{start}"].fill = ws_temp[f"K{start}"].fill = fill
@@ -107,9 +129,7 @@ def update_data_on_sheet(wb_base, ws_base, ws_temp, sheet_name, programme, date_
 
         if sheet_name == "Receptions":
             ws_temp[f"J{start}"] = (
-                '=IFERROR(IF(AND(YEAR(I{index})={year}, MONTH(I{index})={month}), "ok", "skip"), "skip")'.format(
-                    index=start, year=date_report.year, month=date_report.month
-                )
+                f'=IFERROR(IF(AND(YEAR(I{start})={date_report.year}, MONTH(I{start})={date_report.month}), "ok", "skip"), "skip")'  # noqa: E501
             )
             ws_temp[f"J{start}"].font = font
 
@@ -170,7 +190,7 @@ def update_data_on_sheet(wb_base, ws_base, ws_temp, sheet_name, programme, date_
         f_rule_etat_stock = (
             'NOT(ISERROR(SEARCH("{etat_stock}", {col_letter_etat_stock}{index_start})))'
         )
-        for etat_stock in dico_dxf:
+        for etat_stock, _ in dico_dxf.items():
             rule = Rule(
                 type="containsText",
                 operator="containsText",
@@ -185,16 +205,18 @@ def update_data_on_sheet(wb_base, ws_base, ws_temp, sheet_name, programme, date_
             ws_temp.conditional_formatting.add(f"N6:N{start}", rule)
 
 
-def update_sheets_etat_mensuel(wb_base, wb_temp, programme, date_report):
-    """
-    Fonction générale utilisée pour effectuer la mise à jour des données depuis le fichier etat de stock mensuel
+def update_sheets_etat_mensuel(
+    wb_base: Workbook, wb_temp: Workbook, programme: str, date_report: str
+) -> Workbook:
+    """Fonction générale utilisée pour effectuer la mise à jour des données depuis le fichier
+    etat de stock mensuel.
 
     Args:
         wb_base (workbook): workbook base
         wb_temp (workbook): workbook template
         programme (str): le nom du programme
         date_report (str): date de conception du rapport
-    """
+    """  # noqa: D205, DOC201
     global date_format, month_year_str, prev_month_year_str
 
     date_format, month_year_str, prev_month_year_str = get_current_variable(date_report)
@@ -212,11 +234,11 @@ def update_sheets_etat_mensuel(wb_base, wb_temp, programme, date_report):
     sheet_names_ws_temp = wb_temp.sheetnames
 
     for sheet_name, max_row in dico_sheet_names.items():
-        _sheet_name = check_if_sheet_name_in_file(sheet_name, sheet_names_ws_base)
-        ws_base = wb_base[_sheet_name]
+        cp_sheet_name = check_if_sheet_name_in_file(sheet_name, sheet_names_ws_base)
+        ws_base = wb_base[cp_sheet_name]  # type: ignore
 
-        _sheet_name = check_if_sheet_name_in_file(sheet_name, sheet_names_ws_temp)
-        ws_temp = wb_temp[_sheet_name]
+        cp_sheet_name = check_if_sheet_name_in_file(sheet_name, sheet_names_ws_temp)
+        ws_temp = wb_temp[cp_sheet_name]  # type: ignore
 
         update_data_on_sheet(wb_base, ws_base, ws_temp, sheet_name, programme, date_format, max_row)
 

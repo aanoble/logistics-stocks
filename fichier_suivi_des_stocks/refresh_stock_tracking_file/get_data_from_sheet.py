@@ -1,3 +1,4 @@
+import locale
 import re
 from datetime import datetime
 from pathlib import Path
@@ -5,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from compute_indicators.file_utils import process_etat_stock_npsp
-from compute_indicators.utils import check_if_sheet_name_in_file
+from compute_indicators.utils import check_if_sheet_name_in_file, normaliser_dlc
 from efc.interfaces.iopenpyxl import OpenpyxlInterface  # type: ignore
 from generate_stock_tracking_file.utils import has_formula
 from openpyxl import Workbook
@@ -37,19 +38,36 @@ def get_data_from_sheet(
     """
     if sheet_name == "Etat de stock":
         sheet_stock_npsp = check_if_sheet_name_in_file("Etat de stock", sheetnames)
-        assert sheet_stock_npsp is not None, print(
+        assert sheet_stock_npsp is not None, (
             f"La feuille `Etat de stock` n'est pas dans la liste {sheetnames} du classeur excel"
         )
+        # Ajout mise à jour de la feuille "Etat de stock" pour le programme
+        interface = OpenpyxlInterface(wb=src_wb, use_cache=True)
+        interface.clear_cache()
+        data_list = []
+        for row in src_wb[sheet_stock_npsp].iter_rows(min_row=5, max_col=16):
+            data = []
+            for cell in row:
+                if has_formula(cell):
+                    result = interface.calc_cell(cell.coordinate, sheet_stock_npsp)
+                    data.append(result)
+                else:
+                    data.append(cell.value)
+            data_list.append(data)
 
-        df_etat_stock_npsp = pd.read_excel(fp_suivi_stock, sheet_name=sheet_stock_npsp, skiprows=4)
+        df_etat_stock_npsp = pd.DataFrame(data_list[1:], columns=data_list[0]).dropna(how="all")
+        # df_etat_stock_npsp = pd.read_excel(fp_suivi_stock, sheet_name=sheet_stock_npsp, skiprows=4)  # noqa: E501
         df_etat_stock_npsp = df_etat_stock_npsp.loc[df_etat_stock_npsp["Nouveau code"].notna()]
-        df_etat_stock_npsp = process_etat_stock_npsp(df_etat_stock_npsp, date_report, programme)
+        df_etat_stock_npsp = (
+            df_etat_stock_npsp.drop(columns=[None])
+            if None in df_etat_stock_npsp.columns
+            else df_etat_stock_npsp
+        )
+        return process_etat_stock_npsp(df_etat_stock_npsp, date_report, programme)
 
-        return df_etat_stock_npsp.dropna(how="all")
-
-    elif sheet_name == "Stock detaille":
+    if sheet_name == "Stock detaille":
         sheet_stock_detaille = check_if_sheet_name_in_file("Stock detaille", sheetnames)
-        assert sheet_stock_detaille is not None, print(
+        assert sheet_stock_detaille is not None, (
             f"La feuille `Stock detaille` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
@@ -57,24 +75,9 @@ def get_data_from_sheet(
             how="all"
         )
 
-        max_date_year = pd.Timestamp.max.year
-
-        try:
-            df_stock_detaille["Date limite de consommation"] = df_stock_detaille[
-                "Date limite de consommation"
-            ].apply(lambda x: x if x.year < max_date_year else x.replace(year=max_date_year - 1))
-        except Exception:
-            df_stock_detaille["Date limite de consommation"] = df_stock_detaille[
-                "Date limite de consommation"
-            ].str.strip()
-
-            df_stock_detaille["Date limite de consommation"] = df_stock_detaille[
-                "Date limite de consommation"
-            ].apply(
-                lambda x: x
-                if int(x[-4:]) < max_date_year
-                else x.replace(x[-4:], str(max_date_year - 1))
-            )
+        df_stock_detaille["Date limite de consommation"] = pd.to_datetime(
+            df_stock_detaille["Date limite de consommation"].apply(normaliser_dlc)
+        )
 
         df_stock_detaille["Date limite de consommation"] = pd.to_datetime(
             df_stock_detaille["Date limite de consommation"], format="%d/%m/%Y"
@@ -82,21 +85,17 @@ def get_data_from_sheet(
 
         return df_stock_detaille
 
-    elif sheet_name == "Distribution X3":
+    if sheet_name == "Distribution X3":
         sheet_distribution_x3 = check_if_sheet_name_in_file("Distribution X3", sheetnames)
-        assert sheet_distribution_x3 is not None, print(
+        assert sheet_distribution_x3 is not None, (
             f"La feuille `Distribution X3` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
-        df_distribution = pd.read_excel(fp_suivi_stock, sheet_name=sheet_distribution_x3).dropna(
-            how="all"
-        )
+        return pd.read_excel(fp_suivi_stock, sheet_name=sheet_distribution_x3).dropna(how="all")
 
-        return df_distribution
-
-    elif sheet_name == "Receptions":
+    if sheet_name == "Receptions":
         sheet_reception = check_if_sheet_name_in_file("Receptions", sheetnames)
-        assert sheet_reception is not None, print(
+        assert sheet_reception is not None, (
             f"La feuille `Receptions` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
@@ -136,9 +135,9 @@ def get_data_from_sheet(
 
         return df_receptions
 
-    elif sheet_name == "PPI":
+    if sheet_name == "PPI":
         sheet_ppi = check_if_sheet_name_in_file("PPI", sheetnames)
-        assert sheet_ppi is not None, print(
+        assert sheet_ppi is not None, (
             f"La feuille `PPI` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
@@ -146,9 +145,9 @@ def get_data_from_sheet(
 
         return df_ppi.dropna(how="all")
 
-    elif sheet_name == "Prelèvement CQ":
+    if sheet_name == "Prelèvement CQ":
         sheet_prelev = check_if_sheet_name_in_file("Prelèvement CQ", sheetnames)
-        assert sheet_prelev is not None, print(
+        assert sheet_prelev is not None, (
             f"La feuille `Prelèvement CQ` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
@@ -156,13 +155,11 @@ def get_data_from_sheet(
 
         return df_prelevement.dropna(how="all")
 
-    elif sheet_name == "Plan d'appro":
-        import locale
-
+    if sheet_name == "Plan d'appro":
         locale.setlocale(locale.LC_TIME, "fr_FR.UTF-8")
 
         sheet_approv = check_if_sheet_name_in_file("Plan d'appro", sheetnames)
-        assert sheet_approv is not None, print(
+        assert sheet_approv is not None, (
             f"La feuille `Plan d'appro` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
@@ -191,9 +188,9 @@ def get_data_from_sheet(
 
         return df_plan_approv
 
-    elif sheet_name == "Statut Produits":
+    if sheet_name == "Statut Produits":
         sheet_statut_prod = check_if_sheet_name_in_file("Statut Produits", sheetnames)
-        assert sheet_statut_prod is not None, print(
+        assert sheet_statut_prod is not None, (
             f"La feuille `Statut Produits` n'est pas dans la liste {sheetnames} du classeur excel"
         )
 
@@ -204,32 +201,31 @@ def get_data_from_sheet(
 
         return df_statut_prod
 
-    elif sheet_name == "Annexe 1 - Consolidation":
+    if sheet_name == "Annexe 1 - Consolidation":
         sheet_annexe_1 = check_if_sheet_name_in_file("Annexe 1 - Consolidation", sheetnames)
 
-        assert sheet_annexe_1 is not None, print(
-            f"La feuille `Annexe 1 - Consolidation` n'est pas dans la liste {sheetnames} du classeur excel"
+        assert sheet_annexe_1 is not None, (
+            "La feuille `Annexe 1 - Consolidation` n'est pas dans la liste "
+            f"{sheetnames} du classeur excel"
         )
 
         df_etat_stock = pd.read_excel(
             fp_suivi_stock, sheet_name=sheet_annexe_1, skiprows=2, usecols="A:T", engine="openpyxl"
         ).dropna(how="all")
 
-        COLUMN_MAPPING = {
+        column_mapping = {
             "Stock Théorique fin": "stock_theorique_mois_precedent",
         }
-        df_etat_stock.rename(
+        df_etat_stock = df_etat_stock.rename(
             columns={"CODE": "code_produit"},
-            inplace=True,
         )
 
-        df_etat_stock.rename(
-            columns=lambda col: next(
-                (v for k, v in COLUMN_MAPPING.items() if re.search(k, col, re.I)), col
-            )
-            if not col.endswith("SAGE") and not col.endswith("Final Attendu")
-            else col,
-            inplace=True,
+        df_etat_stock = df_etat_stock.rename(
+            columns=lambda col: (
+                next((v for k, v in column_mapping.items() if re.search(k, col, re.I)), col)
+                if not col.endswith("SAGE") and not col.endswith("Final Attendu")
+                else col
+            ),
         )
 
         interface = OpenpyxlInterface(wb=src_wb, use_cache=True)
@@ -248,9 +244,8 @@ def get_data_from_sheet(
         if data_list:
             df_etat_stock = pd.DataFrame(data_list, columns=df_etat_stock.columns)
 
-            df_etat_stock.fillna(np.nan, inplace=True)
+            df_etat_stock = df_etat_stock.fillna(np.nan)
 
         return df_etat_stock.dropna(how="all")
 
-    else:
-        raise ValueError(f"Le nom de la feuille `{sheet_name}` n'est pas reconnu.")
+    raise ValueError(f"Le nom de la feuille `{sheet_name}` n'est pas reconnu.")

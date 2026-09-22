@@ -14,7 +14,7 @@ from .constants import COLUMNS_NAME_ETAT_STOCK, DICO_COLUMNS
 
 def get_dmm_dataframes(
     df_etat_stock: pd.DataFrame, src_wb: Workbook, sheetnames: list[str], date_report: str
-) -> tuple[pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Extract DMM dataframes from the annex sheet.
 
     Args:
@@ -24,7 +24,7 @@ def get_dmm_dataframes(
         date_report (str): Date of the report in 'YYYY-MM-DD' format.
 
     Returns:
-        tuple[pd.DataFrame]: Tuple containing two DataFrames:
+        tuple[pd.DataFrame, pd.DataFrame]: Tuple containing two DataFrames:
             - df_stock_track_dmm: DataFrame with DMM stock tracking data.
             - df_stock_track_dmm_histo: DataFrame with historical DMM data.
     """
@@ -34,7 +34,7 @@ def get_dmm_dataframes(
 
     data_list = []
     for start, row in enumerate(
-        src_wb[sheet_annexe_1].iter_rows(
+        src_wb[sheet_annexe_1].iter_rows(  # type: ignore
             min_row=4,
             min_col=column_index_from_string("V"),
             max_col=column_index_from_string("BE"),
@@ -79,7 +79,7 @@ def get_dmm_dataframes(
 
     interface.clear_cache()
     data_list = []
-    for row in src_wb[sheet_annexe_1].iter_rows(
+    for row in src_wb[sheet_annexe_1].iter_rows(  # type: ignore
         min_row=3,
         min_col=column_index_from_string("BG"),
         max_col=column_index_from_string("BJ"),
@@ -105,14 +105,13 @@ def get_dmm_dataframes(
 
     df_dmm_curent_month["date_report"] = pd.to_datetime(date_report, format="%Y-%m-%d")
     df_dmm_curent_month.columns = df_dmm_curent_month.columns.str.replace("\n", " ")
-    df_dmm_curent_month.rename(
+    df_dmm_curent_month = df_dmm_curent_month.rename(
         columns={
             "Nbre de mois de considérés": "nbre_mois_consideres",
-            "Distributions enregistrées sur les mois de considérés": "distributions_mois_consideres",
+            "Distributions enregistrées sur les mois de considérés": "distributions_mois_consideres",  # noqa: E501
             "DMM Calculée  (à valider pour ce mois)": "dmm_calculee",
             "COMMENTAIRE": "commentaire",
         },
-        inplace=True,
     )
 
     assert (
@@ -168,14 +167,16 @@ def get_cmm_dataframes(
     src_wb: Workbook,
     sheetnames: list[str],
     date_report: str,
-) -> tuple[pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Extract CMM dataframes from the annex sheet.
+
     Args:
         df_etat_stock (pd.DataFrame): DataFrame containing stock data.
         df_stock_prog_nat (pd.DataFrame): DataFrame containing stock program data.
         src_wb (Workbook): Source workbook containing the annex sheet.
         sheetnames (list[str]): List of sheet names in the workbook.
         date_report (str): Date of the report in 'YYYY-MM-DD' format.
+
     Returns:
         tuple[pd.DataFrame]: Tuple containing two DataFrames:
             - df_stock_track_cmm: DataFrame with CMM stock tracking data.
@@ -185,28 +186,30 @@ def get_cmm_dataframes(
     interface = OpenpyxlInterface(wb=src_wb, use_cache=True)
     interface.clear_cache()
 
-    header_row = list(
-        src_wb[sheet_annexe_1].iter_rows(
-            min_row=4,
-            max_row=4,
-            min_col=column_index_from_string("BL"),
-            max_col=column_index_from_string("CU"),
+    header_row = next(
+        iter(
+            src_wb[sheet_annexe_1].iter_rows(  # type: ignore
+                min_row=4,
+                max_row=4,
+                min_col=column_index_from_string("BL"),
+                max_col=column_index_from_string("CU"),
+            )
         )
-    )[0]
+    )
 
     dico_cols = {}
     for cell in header_row:
         if not isinstance(cell, MergedCell):
             dico_cols[str(cell.value)[:10]] = cell.column
 
-    for row in src_wb[sheet_annexe_1].iter_rows(
+    for row in src_wb[sheet_annexe_1].iter_rows(  # type: ignore
         min_row=5, min_col=dico_cols[date_report], max_col=dico_cols[date_report]
     ):
         for cell in row:
             if has_formula(cell):
                 code_produit, facteur_conversion = (
-                    src_wb[sheet_annexe_1].cell(cell.row, 1).value,
-                    src_wb[sheet_annexe_1].cell(cell.row, 8).value,
+                    src_wb[sheet_annexe_1].cell(cell.row, 1).value,  # type: ignore
+                    src_wb[sheet_annexe_1].cell(cell.row, 8).value,  # type: ignore
                 )
                 df = df_stock_prog_nat.loc[df_stock_prog_nat["Code_produit"] == int(code_produit)]
                 if not df.empty:
@@ -215,17 +218,21 @@ def get_cmm_dataframes(
                         if not pd.isna(facteur_conversion) and facteur_conversion != 0
                         else 0
                     )
-                    cell = src_wb[sheet_annexe_1].cell(
-                        row=cell.row, column=dico_cols[date_report], value=value
+                    src_wb[sheet_annexe_1].cell(  # type: ignore
+                        row=cell.row,  # type: ignore
+                        column=dico_cols[date_report],
+                        value=value,
                     )
                 else:
-                    cell = src_wb[sheet_annexe_1].cell(
-                        row=cell.row, column=dico_cols[date_report], value=0
+                    src_wb[sheet_annexe_1].cell(  # type: ignore
+                        row=cell.row,  # type: ignore
+                        column=dico_cols[date_report],
+                        value=0,
                     )
 
     data_list = []
     for start, row in enumerate(
-        src_wb[sheet_annexe_1].iter_rows(
+        src_wb[sheet_annexe_1].iter_rows(  # type: ignore
             min_row=4,
             min_col=column_index_from_string("BL"),
             max_col=column_index_from_string("CU"),
@@ -270,7 +277,7 @@ def get_cmm_dataframes(
 
     interface.clear_cache()
     data_list = []
-    for row in src_wb[sheet_annexe_1].iter_rows(
+    for row in src_wb[sheet_annexe_1].iter_rows(  # type: ignore
         min_row=3,
         min_col=column_index_from_string("CW"),
         max_col=column_index_from_string("CZ"),
@@ -293,14 +300,13 @@ def get_cmm_dataframes(
 
     df_cmm_currenth_month["date_report"] = pd.to_datetime(date_report, format="%Y-%m-%d")
     df_cmm_currenth_month.columns = df_cmm_currenth_month.columns.str.replace("\n", " ")
-    df_cmm_currenth_month.rename(
+    df_cmm_currenth_month = df_cmm_currenth_month.rename(
         columns={
             "Nbre de mois de considérés": "nbre_mois_consideres",
             "Consommations enregistrées sur les mois de considérés": "conso_mois_consideres",
             "CMM Calculée en fin du mois": "cmm_calculee",
             "COMMENTAIRE": "commentaire",
         },
-        inplace=True,
     )
 
     assert (
@@ -370,9 +376,11 @@ def get_data_annexe_2(
         pd.DataFrame: DataFrame containing the data from the annex 2 sheet.
     """
     df_plan_approv["code_and_date_concate"] = df_plan_approv.apply(
-        lambda row: str(int(row["Standard product code"])) + "_" + row["DATE"].strftime("%Y-%m-%d")
-        if not pd.isna(row["Standard product code"])
-        else "_" + row["DATE"].strftime("%Y-%m-%d"),
+        lambda row: (
+            str(int(row["Standard product code"])) + "_" + row["DATE"].strftime("%Y-%m-%d")
+            if not pd.isna(row["Standard product code"])
+            else "_" + row["DATE"].strftime("%Y-%m-%d")
+        ),
         axis=1,
     )
 
